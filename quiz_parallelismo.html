@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz · Parallelismo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4efe6;
+    --ink:#1c1a17;
+    --accent:#7a1f2b;        /* rosso UNIMORE come colore tematico del corso */
+    --accent-soft:#9c3340;
+    --green:#1f5d4c;
+    --red:#a3302a;
+    --gold:#b8860b;
+    --line:#d8cfbf;
+    --card:#fbf8f1;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Spectral',Georgia,serif;font-size:18px;line-height:1.55;
+  }
+  /* ---------- HUD ---------- */
+  .hud{
+    position:sticky;top:0;z-index:50;background:rgba(244,239,230,.94);
+    backdrop-filter:blur(6px);border-bottom:1px solid var(--line);
+    padding:.6rem clamp(1rem,4vw,3rem);
+  }
+  .bar{height:7px;background:var(--line);border-radius:6px;overflow:hidden;margin-bottom:.6rem;}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .4s ease;}
+  .hud-row{display:flex;flex-wrap:wrap;gap:.7rem .9rem;align-items:center;}
+  .score{font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:700;letter-spacing:.02em;}
+  select,.toggle{
+    font-family:'JetBrains Mono',monospace;font-size:.78rem;
+    border:1px solid var(--line);background:var(--card);color:var(--ink);
+    padding:.4rem .7rem;border-radius:7px;cursor:pointer;
+  }
+  .toggle.on{background:var(--gold);color:#fff;border-color:var(--gold);}
+  /* ---------- header ---------- */
+  header.top{padding:clamp(2rem,6vw,4rem) clamp(1rem,4vw,3rem) 1rem;max-width:840px;margin:0 auto;}
+  header.top .eyebrow{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);}
+  header.top h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(2rem,6vw,3.4rem);line-height:1.02;margin:.3rem 0 .4rem;}
+  header.top p{color:#5b554c;margin:0;max-width:60ch;}
+  /* ---------- cards ---------- */
+  main{max-width:840px;margin:0 auto;padding:1rem clamp(1rem,4vw,3rem) 4rem;}
+  .card{
+    position:relative;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:1.4rem 1.5rem 1.5rem;margin:1.4rem 0;
+    overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.03);
+  }
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--line);transition:background .3s;}
+  .card.ok::before{background:var(--green);}
+  .card.no::before{background:var(--red);}
+  .qhead{display:flex;align-items:flex-start;gap:.8rem;margin-bottom:.5rem;flex-wrap:wrap;}
+  .qnum{font-family:'Fraunces',serif;font-weight:900;font-size:2.1rem;line-height:.9;color:var(--accent);min-width:1.4em;}
+  .badges{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-top:.35rem;}
+  .badge{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;padding:.22rem .5rem;border-radius:20px;background:#ece3d3;color:#6a6253;font-weight:700;}
+  .badge.calc{background:var(--gold);color:#fff;}
+  .qtext{font-size:1.12rem;font-weight:500;margin:.4rem 0 1rem;}
+  .opts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.55rem;}
+  .opt{
+    display:flex;gap:.7rem;align-items:flex-start;border:1px solid var(--line);
+    background:#fff;border-radius:9px;padding:.7rem .85rem;cursor:pointer;
+    transition:border-color .15s,background .15s;
+  }
+  .opt:hover{border-color:var(--accent-soft);}
+  .opt .letter{
+    flex:0 0 auto;width:1.7rem;height:1.7rem;border-radius:6px;background:#ece3d3;
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.85rem;
+    display:flex;align-items:center;justify-content:center;color:#6a6253;
+  }
+  .opt .txt{flex:1;}
+  .locked .opt{cursor:default;}
+  .opt.correct{border-color:var(--green);background:#eef5f1;}
+  .opt.correct .letter{background:var(--green);color:#fff;}
+  .opt.wrong{border-color:var(--red);background:#f8edec;}
+  .opt.wrong .letter{background:var(--red);color:#fff;}
+  .mark{font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;margin-left:auto;align-self:center;white-space:nowrap;}
+  .opt.correct .mark{color:var(--green);}
+  .opt.wrong .mark{color:var(--red);}
+  /* reveal blocks */
+  .reveal{display:none;margin-top:1.1rem;animation:fade .35s ease;}
+  .locked .reveal{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  .formula{
+    font-family:'JetBrains Mono',monospace;font-size:.85rem;line-height:1.7;
+    background:#f1f6f3;border-left:4px solid var(--green);border-radius:0 8px 8px 0;
+    padding:.8rem 1rem;margin:.3rem 0 .9rem;white-space:pre-wrap;
+  }
+  .formula em{font-style:normal;color:var(--red);font-weight:700;background:#fcefe3;padding:0 .25em;border-radius:3px;}
+  .expl{margin:.2rem 0;}
+  .expl b{color:var(--accent);}
+  .trap{
+    background:#f8edec;border-left:4px solid var(--red);border-radius:0 8px 8px 0;
+    padding:.7rem 1rem;margin-top:.9rem;font-size:.97rem;
+  }
+  .trap b{color:var(--red);}
+  /* ---------- final ---------- */
+  #final{display:none;text-align:center;padding:3rem clamp(1rem,4vw,3rem) 5rem;max-width:680px;margin:0 auto;}
+  #final.show{display:block;animation:fade .5s ease;}
+  #final .big{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(3rem,12vw,6rem);line-height:1;color:var(--accent);}
+  #final .lbl{font-family:'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase;font-size:.8rem;color:#6a6253;}
+  #final h2{font-family:'Fraunces',serif;font-size:1.8rem;margin:1.2rem 0 .5rem;}
+  #final p{color:#5b554c;}
+  .restart{
+    margin-top:1.5rem;font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:9px;padding:.8rem 1.6rem;cursor:pointer;letter-spacing:.04em;
+  }
+  .restart:hover{background:var(--accent-soft);}
+  .hidden{display:none !important;}
+  @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="bar"><i id="prog"></i></div>
+  <div class="hud-row">
+    <span class="score" id="score">Punteggio 0/0 · 0 risposte</span>
+    <select id="filter" aria-label="Filtra per argomento"></select>
+    <button class="toggle" id="onlyCalc" aria-pressed="false">Solo calcoli</button>
+  </div>
+</div>
+
+<header class="top">
+  <div class="eyebrow">Architettura dei Calcolatori · UNIMORE</div>
+  <h1>Parallelismo</h1>
+  <p>Quiz di autovalutazione sul Cap. 11. Clicca una risposta per bloccarla e leggere spiegazione, formula e tranello. Usa i filtri in alto per concentrarti su un argomento o sui soli esercizi di calcolo.</p>
+</header>
+
+<main id="quiz"></main>
+
+<section id="final">
+  <div class="lbl">Punteggio finale</div>
+  <div class="big" id="finalScore">0/0</div>
+  <h2 id="finalMsg"></h2>
+  <p id="finalSub"></p>
+  <button class="restart" onclick="location.reload()">Ricomincia</button>
+</section>
+
+<script>
+const Q = [
+  // --- HPC e Amdahl ---
+  {
+    topic:"HPC e Amdahl",
+    q:"Quali sono i due modi indicati per raggiungere alte prestazioni (HPC)?",
+    opts:[
+      "Aumentare solo la frequenza di clock e ridurre i transistor",
+      "Aumentare il throughput con più task in parallelo; oppure aumentare throughput e tempo d'esecuzione eseguendo lo stesso processo su più processori",
+      "Eliminare la cache e usare solo registri",
+      "Ridurre il numero di core e aumentare la latenza"
+    ],
+    correct:1,
+    expl:"Si distinguono <b>task/process-level parallelism</b> (più processi su una o più CPU) e <b>parallel processing</b> vero e proprio (stesso processo su più processori, migliorando anche il tempo di esecuzione).",
+    trap:"⚑ Il tranello: aumentare la sola frequenza non è la strategia HPC descritta: il guadagno deriva dal parallelismo, non dal clock."
+  },
+  {
+    topic:"HPC e Amdahl",
+    t:"calcul",
+    q:"Programma con 15% di parte sequenziale (non parallelizzabile), eseguito su 10 core. Quanto vale lo speedup secondo Amdahl?",
+    opts:["10","4,25","6,67","1,15"],
+    correct:1,
+    formula:"Fenh = 0,85 (parte migliorabile)\nSp = 1 / [(1 − Fenh) + Fenh/N]\nSp = 1 / [(1 − 0,85) + 0,85/10]\nSp = 1 / [0,15 + 0,085] = <em>4,25</em>",
+    expl:"Con il 15% di parte non parallelizzabile, anche 10 CPU producono uno speedup di soli <b>~4,25</b>: la frazione sequenziale domina il limite.",
+    trap:"⚑ Il tranello: 10 sarebbe lo speedup ideale solo se l'intero programma fosse parallelizzabile (parte sequenziale = 0)."
+  },
+  {
+    topic:"HPC e Amdahl",
+    t:"calcul",
+    q:"Si vuole uno speedup di 90 con 100 processori. Quale frazione massima del programma può restare sequenziale?",
+    opts:["Circa il 10%","Circa l'1%","Circa lo 0,1%","Circa il 5%"],
+    correct:2,
+    formula:"Sp = 1 / [(1 − x) + x/100] = 90, con x = frazione parallela\n90·[1 − 0,99x] = 1\n90 − 89,1x = 1 → x ≈ 0,999\nParte sequenziale = 1 − x ≈ <em>0,1%</em>",
+    expl:"Per ottenere speedup 90 su 100 processori serve che resti sequenziale solo lo <b>0,1%</b> del programma: la legge di Amdahl è estremamente punitiva.",
+    trap:"⚑ Il tranello: l'1% sembra già 'piccolo', ma con 100 processori limiterebbe lo speedup ben al di sotto di 90. Serve lo 0,1%."
+  },
+  {
+    topic:"HPC e Amdahl",
+    q:"Qual è la differenza fra HPC (high-performance) e HTC (high-throughput computing)?",
+    opts:[
+      "HPC misura operazioni al mese, HTC operazioni al secondo",
+      "HPC richiede grande potenza per brevi periodi (misurata in FLOPS); HTC capacità elevate per periodi molto lunghi (mesi/anni)",
+      "Sono sinonimi",
+      "HTC riguarda solo le GPU, HPC solo le CPU"
+    ],
+    correct:1,
+    expl:"L'HPC punta a tanta potenza per <b>brevi periodi</b> (FLOPS), l'HTC a completare molti processi su periodi <b>lunghi</b> (operazioni al mese/anno).",
+    trap:"⚑ Il tranello: è invertito: è l'HPC a misurare i FLOPS (operazioni al secondo), mentre l'HTC ragiona su scale temporali lunghe."
+  },
+  // --- Scalabilità ---
+  {
+    topic:"Scalabilità",
+    q:"Cosa misura la scalabilità forte (strong scaling)?",
+    opts:[
+      "L'incremento di velocità mantenendo fissa la dimensione del problema e aumentando l'hardware",
+      "L'incremento di velocità quando il problema cresce proporzionalmente all'hardware",
+      "Il consumo energetico al crescere dei core",
+      "La capacità della cache di terzo livello"
+    ],
+    correct:0,
+    expl:"Nello <b>strong scaling</b> il problema resta fisso e si aggiunge hardware: si misura quanto più veloce diventa la soluzione.",
+    trap:"⚑ Il tranello: far crescere il problema in proporzione all'hardware è la definizione di scalabilità <b>debole</b> (weak scaling)."
+  },
+  {
+    topic:"Scalabilità",
+    q:"Perché la scalabilità debole (weak scaling) non è sempre immediata?",
+    opts:[
+      "Perché i processori non possono mai comunicare tra loro",
+      "Perché se i dati crescono e non stanno più in cache, si ha un calo di prestazioni dovuto alla gerarchia di memoria",
+      "Perché il clock diminuisce automaticamente",
+      "Perché la legge di Amdahl non si applica"
+    ],
+    correct:1,
+    expl:"Crescendo la dimensione del problema, i dati possono <b>non entrare più in cache</b>: la gerarchia di memoria introduce rallentamenti che spezzano la scalabilità ideale.",
+    trap:"⚑ Il tranello: il problema non è la comunicazione in sé, ma l'effetto della gerarchia di memoria quando i dati escono dalla cache."
+  },
+  // --- Speedup e load balancing ---
+  {
+    topic:"Speedup e load balancing",
+    t:"calcul",
+    q:"10TS non parallelizzabili e 100TS parallelizzabili (110TS su 1 CPU). Speedup con 10 processori?",
+    opts:["11","5,5","10","8,8"],
+    correct:1,
+    formula:"Tnew = 100TS/10 + 10TS = 20TS\nSp = 110 / 20 = <em>5,5</em>",
+    expl:"La parte parallela (100TS) si divide per 10, ma i 10TS sequenziali restano: Tnew = 20TS, quindi Sp = <b>5,5</b>.",
+    trap:"⚑ Il tranello: 11 ignora del tutto i 10TS sequenziali. Il termine non parallelizzabile abbassa sempre lo speedup."
+  },
+  {
+    topic:"Speedup e load balancing",
+    t:"calcul",
+    q:"Stesso problema (110TS), ma con 40 processori. Quanto vale lo speedup?",
+    opts:["8,8","2,75","40","4"],
+    correct:0,
+    formula:"Tnew = 100TS/40 + 10TS = 2,5TS + 10TS = 12,5TS\nSp = 110 / 12,5 = <em>8,8</em>",
+    expl:"Con 40 CPU la parte parallela si riduce molto, ma i 10TS sequenziali dominano: Tnew = 12,5TS, Sp ≈ <b>8,8</b>.",
+    trap:"⚑ Il tranello: quadruplicare i processori (da 10 a 40) NON quadruplica lo speedup (da 5,5 a 8,8): la parte sequenziale limita il guadagno."
+  },
+  {
+    topic:"Speedup e load balancing",
+    t:"calcul",
+    q:"Problema più grande (400TS paralleli + 10TS seriali = 410TS), eseguito su 40 processori. Speedup?",
+    opts:["10,25","20,5","41","8,2"],
+    correct:1,
+    formula:"Tnew = 400TS/40 + 10TS = 10TS + 10TS = 20TS\nSp = 410 / 20 = <em>20,5</em>",
+    expl:"Aumentando le dimensioni del problema la frazione parallela cresce, quindi lo speedup migliora: Sp = <b>20,5</b>. È l'idea del weak scaling.",
+    trap:"⚑ Il tranello: 8,2 è lo speedup dello stesso problema grande ma su 10 CPU; con 40 processori si arriva a 20,5."
+  },
+  {
+    topic:"Speedup e load balancing",
+    q:"Cosa accade allo speedup se il carico NON è bilanciato fra i processori?",
+    opts:[
+      "Migliora, perché un processore lavora di più",
+      "Peggiora, perché il tempo è dettato dal processore più carico (max del carico)",
+      "Resta identico al caso bilanciato",
+      "Diventa esattamente uguale al numero di processori"
+    ],
+    correct:1,
+    expl:"Con carico sbilanciato il tempo totale è il <b>massimo</b> tra i carichi: il processore più carico fa da collo di bottiglia e lo speedup scende.",
+    trap:"⚑ Il tranello: dare più lavoro a una CPU non accelera nulla: la rallenta, perché le altre devono attenderla (max del tempo)."
+  },
+  // --- Tipi di parallelismo ---
+  {
+    topic:"Tipi di parallelismo",
+    q:"Pipelining e replicazione corrispondono rispettivamente a quale tipo di parallelismo?",
+    opts:[
+      "Parallelismo spaziale e parallelismo temporale",
+      "Parallelismo temporale e parallelismo spaziale",
+      "Entrambi spaziali",
+      "Entrambi temporali"
+    ],
+    correct:1,
+    expl:"Il <b>pipelining</b> è parallelismo temporale (unità diverse usate in sequenza nel tempo); la <b>replicazione</b> è parallelismo spaziale (unità replicate che lavorano nello stesso istante).",
+    trap:"⚑ Il tranello: è facile invertire i due: la pipeline distribuisce nel tempo, la replicazione distribuisce nello spazio."
+  },
+  {
+    topic:"Tipi di parallelismo",
+    q:"Cos'è un thread (thread of execution)?",
+    opts:[
+      "Un intero programma eseguibile autonomo",
+      "L'unità atomica in cui un processo può essere suddiviso, eseguibile in parallelo ad altri thread",
+      "Un canale di comunicazione tra due CPU",
+      "Un registro speciale della pipeline"
+    ],
+    correct:1,
+    expl:"Il <b>thread</b> è l'unità atomica in cui un processo è suddiviso e che può essere eseguita in parallelo ad altri thread.",
+    trap:"⚑ Il tranello: un programma intero è il processo: il thread è una sua sottoparte più fine, non l'intero eseguibile."
+  },
+  // --- Classificazione di Flynn ---
+  {
+    topic:"Classificazione di Flynn",
+    q:"Nella classificazione di Flynn, cosa caratterizza un'architettura SIMD?",
+    opts:[
+      "Una sola istruzione applicata a dati multipli (un'unica CU, più EU)",
+      "Istruzioni multiple su dati multipli (più CU, più EU)",
+      "Una sola istruzione su un singolo dato",
+      "Istruzioni multiple su un singolo dato"
+    ],
+    correct:0,
+    expl:"<b>SIMD</b> = Single Instruction Multiple Data: una sola unità di controllo (CU) guida più unità di esecuzione (EU) che applicano la stessa istruzione a dati diversi.",
+    trap:"⚑ Il tranello: più CU e più EU descrivono il <b>MIMD</b>. Il SIMD ha una sola CU che comanda tutte le EU."
+  },
+  {
+    topic:"Classificazione di Flynn",
+    q:"Quale categoria di Flynn corrisponde a istruzioni multiple su dati multipli, tipica dei sistemi multicore?",
+    opts:["SISD","SIMD","MISD","MIMD"],
+    correct:3,
+    expl:"<b>MIMD</b> (Multiple Instruction Multiple Data) ha più unità di controllo e più unità di esecuzione: è il modello dei sistemi multiprocessore e multicore.",
+    trap:"⚑ Il tranello: il SISD è il classico processore sequenziale a singolo flusso, non un sistema multicore."
+  },
+  // --- SIMD / SIMT / GPU ---
+  {
+    topic:"SIMD, SIMT e GPU",
+    q:"Cosa significa il modello SIMT usato nelle GPU NVIDIA?",
+    opts:[
+      "Single Instruction Multiple Thread",
+      "Sequential Instruction Multiple Transfer",
+      "Single Issue Multiple Tasks",
+      "Shared Instruction Memory Threads"
+    ],
+    correct:0,
+    expl:"<b>SIMT</b> = Single Instruction Multiple Thread: thread multipli indipendenti eseguono le stesse istruzioni, modello evoluto del SIMD introdotto da NVIDIA (Tesla/Fermi).",
+    trap:"⚑ Il tranello: la T sta per Thread, non per Transfer o Tasks: è la chiave del modello many-core delle GPU."
+  },
+  {
+    topic:"SIMD, SIMT e GPU",
+    q:"Quale ambiente di programmazione parallela dà accesso alle istruzioni native per GPU NVIDIA?",
+    opts:["OpenMP","CUDA","MPI","POSIX threads"],
+    correct:1,
+    expl:"<b>CUDA</b> (Compute Unified Device Architecture) è la piattaforma NVIDIA per la programmazione parallela che espone le istruzioni native delle GPU.",
+    trap:"⚑ Il tranello: MPI e OpenMP sono standard di parallelismo generale (cluster/CPU), non l'ambiente nativo specifico delle GPU NVIDIA."
+  },
+  {
+    topic:"SIMD, SIMT e GPU",
+    q:"Le estensioni SIMD dell'ISA x86 Intel, in ordine cronologico, sono:",
+    opts:[
+      "AVX → SSE → MMX",
+      "MMX → SSE → AVX",
+      "SSE → MMX → AVX",
+      "MMX → AVX → SSE"
+    ],
+    correct:1,
+    expl:"Furono aggiunte prima le <b>MMX</b> (MultiMedia Extension), poi le <b>SSE</b> (Streaming SIMD Extension), infine le <b>AVX</b> (Advanced Vector Extension).",
+    trap:"⚑ Il tranello: le AVX sono le più recenti, non le prime: l'ordine storico parte dalle MMX."
+  },
+  {
+    topic:"SIMD, SIMT e GPU",
+    q:"Perché le memorie delle GPU sono orientate più alla bandwidth (throughput) che alla latenza?",
+    opts:[
+      "Perché le GPU non usano la memoria",
+      "Perché sfruttano un forte parallelismo a livello di thread e hanno poche gerarchie di cache",
+      "Perché eseguono una sola istruzione alla volta",
+      "Perché la latenza non incide mai sulle prestazioni"
+    ],
+    correct:1,
+    expl:"Le GPU puntano su centinaia di <b>thread indipendenti</b> e su poca gerarchia di cache: privilegiano la banda (dati al secondo) per nascondere la latenza con il parallelismo.",
+    trap:"⚑ Il tranello: le GPU usano eccome la memoria, ma con priorità diversa: la latenza del singolo accesso conta meno del throughput aggregato."
+  },
+  // --- MIMD: UMA / NUMA ---
+  {
+    topic:"MIMD: UMA e NUMA",
+    q:"Cosa distingue un'architettura UMA (Uniform Memory Access) o SMP?",
+    opts:[
+      "Ogni processore ha un tempo di accesso alla memoria diverso a seconda della posizione del dato",
+      "Ogni processore ha lo stesso tempo di accesso alla memoria condivisa (relazione simmetrica)",
+      "La memoria è privata di ogni processore",
+      "I processori comunicano solo tramite scambio di messaggi"
+    ],
+    correct:1,
+    expl:"In <b>UMA/SMP</b> ogni processore ha lo <b>stesso</b> tempo di accesso alla memoria condivisa, da cui i nomi Uniform Memory Access e Symmetric Multiprocessor.",
+    trap:"⚑ Il tranello: tempi di accesso diversi a seconda della posizione del dato definiscono invece le <b>NUMA</b>."
+  },
+  {
+    topic:"MIMD: UMA e NUMA",
+    q:"Cosa caratterizza un sistema CC-NUMA (cache coherent NUMA)?",
+    opts:[
+      "Non usa cache",
+      "Se un processore modifica una locazione condivisa, gli altri ne sono a conoscenza e le cache restano coerenti",
+      "Ha un tempo di accesso uniforme per tutti",
+      "La memoria è completamente privata"
+    ],
+    correct:1,
+    expl:"Nelle <b>CC-NUMA</b> la modifica di una locazione condivisa è propagata: tutte le cache vengono rese coerenti. Le multicore attuali sono di questo tipo.",
+    trap:"⚑ Il tranello: il tempo uniforme è la caratteristica delle UMA; la NUMA per definizione ha accessi non uniformi."
+  },
+  {
+    topic:"MIMD: UMA e NUMA",
+    q:"Cosa distingue le architetture multi-computer (distributed memory MIMD)?",
+    opts:[
+      "Memoria condivisa con global address space",
+      "Memoria distribuita e privata di ogni processore, con comunicazione via scambio di messaggi (message passing)",
+      "Una sola CPU con più ALU",
+      "Assenza totale di memoria"
+    ],
+    correct:1,
+    expl:"Le <b>multi-computer</b> replicano coppie processore/memoria con memoria privata: comunicano via <b>message passing</b>, spesso con modello SPMD.",
+    trap:"⚑ Il tranello: la memoria condivisa con global address space è il multiprocessore (shared memory), non il multi-computer distribuito."
+  },
+  {
+    topic:"MIMD: UMA e NUMA",
+    q:"Cosa indica il modello SPMD (Single Program Multiple Data)?",
+    opts:[
+      "Una sola istruzione applicata a un solo dato",
+      "Processori che eseguono lo stesso programma su dati diversi, ma con flusso di istruzioni potenzialmente diverso",
+      "Programmi diversi su un singolo dato condiviso",
+      "Un programma che gira su una sola CPU"
+    ],
+    correct:1,
+    expl:"In <b>SPMD</b> i processori eseguono lo <b>stesso programma su dati diversi</b>, pur potendo seguire percorsi di esecuzione differenti: tipico del message passing MIMD.",
+    trap:"⚑ Il tranello: SPMD è più flessibile del SIMD puro: pur condividendo il programma, ogni processore può divergere nel flusso di controllo."
+  },
+  // --- Coerenza cache / MESI ---
+  {
+    topic:"Coerenza delle cache",
+    q:"Quando si può dire che un sistema di memoria è coerente?",
+    opts:[
+      "Quando ogni lettura di un dato restituisce il valore scritto più di recente",
+      "Quando tutte le cache hanno la stessa dimensione",
+      "Quando non esiste alcuna cache",
+      "Quando ogni processore ha memoria privata"
+    ],
+    correct:0,
+    expl:"Un sistema è <b>coerente</b> se qualunque lettura di un dato restituisce il valore scritto più recentemente. La <b>consistency</b> riguarda invece *quando* quel valore diventa visibile.",
+    trap:"⚑ Il tranello: la dimensione delle cache non c'entra con la coerenza, che è una proprietà sul valore restituito da una lettura."
+  },
+  {
+    topic:"Coerenza delle cache",
+    q:"Su cosa si basa il protocollo di coerenza cache di tipo snooping?",
+    opts:[
+      "Su un controller centralizzato che mantiene tutto lo stato",
+      "Su cache che monitorano (snoop) un mezzo broadcast (bus/rete) per sapere se hanno copia di un blocco richiesto",
+      "Sull'eliminazione totale delle cache",
+      "Sulla memoria virtuale a pagine"
+    ],
+    correct:1,
+    expl:"Nello <b>snooping</b> ogni cache osserva il mezzo broadcast condiviso (bus o rete) per rilevare richieste su blocchi di cui possiede copia: non c'è stato centralizzato.",
+    trap:"⚑ Il tranello: il controller centralizzato con tabella è il protocollo <b>directory based</b>, l'alternativa allo snooping."
+  },
+  {
+    topic:"Coerenza delle cache",
+    q:"Nel protocollo MESI, quali sono i due stati 'single owner' (proprietario unico)?",
+    opts:[
+      "Shared e Invalid",
+      "Exclusive e Modified",
+      "Modified e Shared",
+      "Invalid e Exclusive"
+    ],
+    correct:1,
+    expl:"In MESI gli stati a proprietario unico sono <b>Exclusive</b> e <b>Modified</b>: solo in essi una cache può modificare il dato senza condivisione.",
+    trap:"⚑ Il tranello: Shared indica copie multiple coerenti, non un singolo proprietario; Invalid è una copia non valida."
+  },
+  {
+    topic:"Coerenza delle cache",
+    q:"Cosa si intende per 'downgrade' nel protocollo MESI?",
+    opts:[
+      "Il passaggio da single-owner (E o M) a Shared, che toglie all'owner il diritto di modifica",
+      "Il passaggio da Shared a Modified per poter scrivere",
+      "L'invalidazione di tutte le cache",
+      "La cancellazione del blocco dalla memoria"
+    ],
+    correct:0,
+    expl:"Il <b>downgrade</b> porta da uno stato single-owner (Exclusive/Modified) a <b>Shared</b>: il dato diventa condiviso e l'owner perde il diritto esclusivo di modifica. Avviene con una read miss altrui.",
+    trap:"⚑ Il tranello: il passaggio verso Modified per scrivere è l'<b>upgrade</b>, non il downgrade: i due movimenti sono opposti."
+  },
+  {
+    topic:"Coerenza delle cache",
+    q:"Perché un protocollo MESI è detto write-invalidate?",
+    opts:[
+      "Perché invalida i dati in memoria centrale ad ogni lettura",
+      "Perché, prima di scrivere un dato, invalida tutte le altre copie nelle cache degli altri processori",
+      "Perché impedisce qualsiasi scrittura",
+      "Perché disabilita la cache durante le scritture"
+    ],
+    correct:1,
+    expl:"Un protocollo <b>write-invalidate</b> assicura accesso esclusivo prima della scrittura: tutte le altre copie cache del dato vengono invalidate, così non restano copie obsolete.",
+    trap:"⚑ Il tranello: non invalida la memoria centrale ad ogni lettura: invalida le copie *negli altri processori* solo in occasione di una scrittura."
+  },
+  // --- Multiple issue ---
+  {
+    topic:"Multiple issue",
+    q:"Qual è l'obiettivo prestazionale delle architetture multiple-issue rispetto alla pipeline semplice?",
+    opts:[
+      "Ottenere un CPI = 1",
+      "Ottenere un CPI < 1 (IPC > 1) facendo iniziare più istruzioni nello stesso ciclo",
+      "Ottenere un CPI molto maggiore di 1",
+      "Eliminare del tutto la pipeline"
+    ],
+    correct:1,
+    expl:"Dopo aver raggiunto un CPI≈1 con la pipeline, le architetture <b>multiple-issue</b> avviano più istruzioni per ciclo per ottenere un <b>CPI < 1</b> (IPC > 1).",
+    trap:"⚑ Il tranello: CPI = 1 è già l'obiettivo della pipeline classica: il multiple-issue mira a scendere sotto quel valore."
+  },
+  {
+    topic:"Multiple issue",
+    q:"Cosa caratterizza un'architettura VLIW (Very Long Instruction Word)?",
+    opts:[
+      "Decide a run-time quali istruzioni eseguire in parallelo",
+      "Impacchetta staticamente, a tempo di compilazione, un numero fisso di istruzioni in un'unica istruzione macchina",
+      "Esegue una sola istruzione per ciclo",
+      "Non richiede unità funzionali multiple"
+    ],
+    correct:1,
+    expl:"Nelle <b>VLIW</b> il compilatore decide <b>staticamente</b> quali operazioni eseguire in parallelo, formattandole in un'unica istruzione lunga (static multiple issue).",
+    trap:"⚑ Il tranello: la decisione a run-time è propria delle <b>superscalari</b> (dynamic multiple issue), non delle VLIW statiche."
+  },
+  {
+    topic:"Multiple issue",
+    q:"Perché un programma compilato per una VLIW non funziona su una VLIW con Issue Width (IW) diverso?",
+    opts:[
+      "Perché la frequenza di clock cambia",
+      "Perché il numero di istruzioni impacchettate (IW) è fissato in fase di compilazione e dipende dall'hardware target",
+      "Perché cambia il set di registri",
+      "Perché la VLIW non usa la memoria cache"
+    ],
+    correct:1,
+    expl:"L'<b>Issue Width</b> (numero di istruzioni compilate assieme) è cablato nel codice macchina: cambiando IW (almeno se minore) il pacchetto non è più valido per l'altro hardware.",
+    trap:"⚑ Il tranello: non è una questione di clock: è il parallelismo statico fissato dal compilatore a legare il binario all'IW specifico."
+  },
+  {
+    topic:"Multiple issue",
+    q:"Cosa distingue un'architettura superscalare da una VLIW?",
+    opts:[
+      "La superscalare decide dinamicamente (a run-time) quante istruzioni eseguire in unità funzionali diverse",
+      "La superscalare è puramente statica come la VLIW",
+      "La superscalare esegue una sola istruzione per ciclo",
+      "La superscalare non ha unità funzionali multiple"
+    ],
+    correct:0,
+    expl:"La <b>superscalare</b> (dynamic multiple issue) decide a run-time, tramite l'unità di fetch, quante e quali istruzioni indipendenti avviare su unità funzionali diverse.",
+    trap:"⚑ Il tranello: la scelta statica a tempo di compilazione è la VLIW: la superscalare la fa dinamicamente in hardware."
+  },
+  {
+    topic:"Multiple issue",
+    q:"Cos'è un'architettura SUPERPIPELINE?",
+    opts:[
+      "Una pipeline con un solo stadio molto veloce",
+      "Una in cui ogni stadio esegue più operazioni in porzioni di clock differenti (clock interno multiplo), così da avviare più istruzioni e ottenere CPI<1",
+      "Una pipeline senza registri intermedi",
+      "Una architettura che esegue le istruzioni fuori ordine"
+    ],
+    correct:1,
+    expl:"Nella <b>superpipeline</b> ogni stadio sfrutta porzioni di clock (clock interno doppio/multiplo): più istruzioni partono nello stesso periodo, abbassando il CPI sotto 1.",
+    trap:"⚑ Il tranello: l'esecuzione fuori ordine è una tecnica distinta (out-of-order); la superpipeline gioca sulla suddivisione fine del clock."
+  },
+  {
+    topic:"Multiple issue",
+    q:"Nel Pentium del 1993 (prima superscalare Intel), a cosa servivano le due pipeline U e V?",
+    opts:[
+      "U eseguiva solo istruzioni semplici, V tutte le istruzioni",
+      "U eseguiva tutte le istruzioni (anche col microcodice), V solo quelle semplici, per uno speedup fino a 2 (2 istruzioni/clock)",
+      "U e V eseguivano programmi diversi",
+      "Servivano solo per la gestione della cache"
+    ],
+    correct:1,
+    expl:"La pipeline <b>U</b> gestiva tutte le istruzioni (anche col microcodice), la <b>V</b> solo le semplici: due istruzioni indipendenti per clock, con speedup vicino a 2 sul codice intero.",
+    trap:"⚑ Il tranello: i ruoli sono invertiti: è la U (non la V) la pipeline completa capace di eseguire anche le istruzioni complesse."
+  },
+  // --- Esecuzione speculativa / OOO / renaming ---
+  {
+    topic:"Speculativa e fuori ordine",
+    q:"Cosa si intende per esecuzione speculativa?",
+    opts:[
+      "Eseguire un blocco solo dopo aver verificato che vada eseguito",
+      "Eseguire un blocco prima di sapere se la struttura di controllo precedente ne preveda l'esecuzione",
+      "Eseguire le istruzioni rigorosamente in ordine",
+      "Disabilitare la pipeline durante i salti"
+    ],
+    correct:1,
+    expl:"Nell'<b>esecuzione speculativa</b> un blocco viene eseguito <b>prima</b> di sapere se servirà davvero (es. prima di risolvere un salto), salvando i risultati in registri temporanei (scratch).",
+    trap:"⚑ Il tranello: eseguire solo dopo la verifica è esattamente il contrario della speculazione, che anticipa l'esecuzione."
+  },
+  {
+    topic:"Speculativa e fuori ordine",
+    q:"A cosa serve la rinomina dei registri (register renaming / RAT)?",
+    opts:[
+      "Ad aumentare la frequenza di clock",
+      "A evitare le alee WAW e WAR usando registri temporanei, permettendo l'esecuzione parallela di istruzioni senza dipendenze vere",
+      "A ridurre la dimensione della cache",
+      "A eliminare le dipendenze RAW reali"
+    ],
+    correct:1,
+    expl:"La <b>rinomina dei registri</b> mappa i registri logici su registri fisici/temporanei, eliminando le false dipendenze (WAW, WAR) e abilitando il parallelismo.",
+    trap:"⚑ Il tranello: le dipendenze <b>RAW</b> sono dipendenze 'vere' sui dati: la rinomina NON le elimina, agisce solo sulle false (WAW/WAR)."
+  },
+  {
+    topic:"Speculativa e fuori ordine",
+    q:"Le istruzioni 'add r1,r2,r3' e 'add r1,r5,r6' che scrivono entrambe in r1 generano quale tipo di alea?",
+    opts:["RAW","WAR","WAW","Nessuna alea"],
+    correct:2,
+    expl:"Scrivono entrambe sullo stesso registro destinazione r1 senza dipendere dagli stessi dati: è un'alea <b>WAW</b> (Write After Write), risolvibile con la rinomina.",
+    trap:"⚑ Il tranello: RAW richiederebbe che la seconda leggesse un dato prodotto dalla prima; qui il conflitto è solo sulla destinazione (WAW)."
+  },
+  {
+    topic:"Speculativa e fuori ordine",
+    q:"Nell'esecuzione fuori ordine (out-of-order), quali vincoli vengono comunque rispettati?",
+    opts:[
+      "Nessun vincolo: tutto è completamente libero",
+      "I dati vengono prelevati in ordine (in-order issue) e riscritti in ordine alla fine (in-order commit)",
+      "Le istruzioni vengono solo eseguite in ordine inverso",
+      "Si esegue una sola istruzione per volta"
+    ],
+    correct:1,
+    expl:"L'esecuzione può avvenire fuori ordine, ma con <b>in-order issue</b> (prelievo ordinato) e <b>in-order commit</b> (scrittura finale ordinata) per preservare la semantica del programma.",
+    trap:"⚑ Il tranello: 'fuori ordine' riguarda solo la fase di esecuzione: l'immissione e il commit restano ordinati per garantire correttezza."
+  },
+  {
+    topic:"Speculativa e fuori ordine",
+    q:"A cosa serve il ROB (Reorder Buffer) nei processori come il Pentium II/Sandy Bridge?",
+    opts:[
+      "A memorizzare permanentemente i risultati del programma",
+      "A tenere traccia delle istruzioni (come scoreboard) e ricostruire l'ordine cronologico per il commit, scartando le speculative errate",
+      "A sostituire la cache L1",
+      "A generare il segnale di clock"
+    ],
+    correct:1,
+    expl:"Il <b>ROB</b> è un buffer circolare che traccia lo stato delle istruzioni e ne ripristina l'ordine cronologico in uscita, eliminando quelle eseguite speculativamente per errore (es. salto mal predetto).",
+    trap:"⚑ Il tranello: il ROB non è una memoria di archiviazione permanente: è una struttura temporanea per l'ordinamento e il commit."
+  },
+  {
+    topic:"Speculativa e fuori ordine",
+    q:"Perché la rinomina dei registri è particolarmente importante nell'architettura x86?",
+    opts:[
+      "Perché x86 ha centinaia di registri fisici",
+      "Perché x86 ha solo 8 registri interi (e 8 FP), quindi è molto alta la probabilità che due istruzioni usino gli stessi registri",
+      "Perché x86 non usa la pipeline",
+      "Perché x86 non ha unità floating point"
+    ],
+    correct:1,
+    expl:"L'ISA x86 dispone di soli <b>8 registri</b> interi: con così pochi nomi, le false dipendenze sono frequentissime, quindi la rinomina (dalla microarchitettura P6) è essenziale.",
+    trap:"⚑ Il tranello: i registri *fisici* interni sono molti (es. 40 o 128), ma quelli *architetturali* dell'ISA x86 sono solo 8: è questo a rendere critica la rinomina."
+  },
+  // --- Evoluzione Intel / Core ---
+  {
+    topic:"Evoluzione Intel",
+    q:"Perché la microarchitettura NetBurst del Pentium 4 (fino a 31 stadi) fu considerata un fallimento?",
+    opts:[
+      "Perché aveva troppo pochi stadi",
+      "Perché le pipeline lunghissime subivano penalizzazioni enormi su salti mal predetti, scaldavano e consumavano troppo senza raggiungere i clock sperati",
+      "Perché non supportava il multicore",
+      "Perché non aveva cache"
+    ],
+    correct:1,
+    expl:"Le pipeline molto lunghe del <b>Pentium 4 Prescott</b> pagavano caro i salti non predetti e dissipavano troppo calore (fino a 103W) senza arrivare ai 10 GHz sperati: segnò il passaggio ai Core.",
+    trap:"⚑ Il tranello: il problema era l'eccesso di stadi (fino a 31), non la loro scarsità: pipeline troppo lunghe sono fragili sui salti."
+  },
+  {
+    topic:"Evoluzione Intel",
+    q:"Dal 2006 quale cambio di strategia ha adottato Intel per aumentare le prestazioni?",
+    opts:[
+      "Aumentare ancora la frequenza del singolo processore",
+      "Inserire più processori (core) nello stesso chip (multicore), sfruttando anche software parallelo e multithread",
+      "Eliminare le cache di terzo livello",
+      "Tornare a una sola pipeline a 31 stadi"
+    ],
+    correct:1,
+    expl:"Dal 2006 Intel passa al <b>multicore</b>: più core nello stesso chip, con il guadagno di prestazioni che dipende ora anche dal software parallelo/multithread.",
+    trap:"⚑ Il tranello: aumentare ancora la frequenza è proprio la strada abbandonata dopo il Pentium 4, a causa di calore e consumi."
+  },
+  {
+    topic:"Evoluzione Intel",
+    q:"Perché le istruzioni CISC x86 (IA-32) vengono tradotte in micro-operazioni (uop) di tipo RISC?",
+    opts:[
+      "Perché il CISC non si presta bene all'esecuzione fuori ordine, mentre le uop in forma di tripla (2 sorgenti, 1 destinazione) sì",
+      "Perché le uop occupano più spazio in memoria",
+      "Perché il RISC è più lento da decodificare",
+      "Perché elimina la necessità di una pipeline"
+    ],
+    correct:0,
+    expl:"L'ISA CISC mal si adatta all'out-of-order: dal Pentium II le istruzioni x86 vengono tradotte in <b>uop</b> in forma di tripla (come nelle macchine RISC), mantenendo l'ISA CISC ma con cuore RISC.",
+    trap:"⚑ Il tranello: la traduzione in uop non serve a occupare più spazio, ma a rendere le istruzioni adatte all'esecuzione fuori ordine."
+  },
+  // --- Interruzioni ---
+  {
+    topic:"Interruzioni",
+    q:"Cos'è un'interruzione?",
+    opts:[
+      "L'esecuzione anticipata di un blocco speculativo",
+      "La sospensione forzata del processo in esecuzione e il trasferimento del controllo a una routine di servizio (RRI/ISR), al termine della quale si torna al processo sospeso",
+      "Un errore irrecuperabile che blocca la CPU",
+      "Un trasferimento dati diretto tra memoria e I/O"
+    ],
+    correct:1,
+    expl:"L'<b>interruzione</b> sospende il processo corrente e passa il controllo alla <b>routine di servizio</b> (RRI/ISR); al termine il controllo torna al processo interrotto, in modo trasparente.",
+    trap:"⚑ Il tranello: il trasferimento diretto memoria↔I/O è il DMA, un meccanismo diverso dalla gestione delle interruzioni."
+  },
+  {
+    topic:"Interruzioni",
+    q:"Come si distinguono interruzioni asincrone e sincrone?",
+    opts:[
+      "Le asincrone sono software, le sincrone hardware",
+      "Le asincrone sono hardware da sorgenti esterne (I/O); le sincrone (eccezioni) sono dovute al programma/CPU",
+      "Sono la stessa cosa",
+      "Le sincrone arrivano sempre dalle periferiche di rete"
+    ],
+    correct:1,
+    expl:"Le <b>asincrone</b> sono hardware, generate da sorgenti esterne (I/O) e non legate all'istruzione corrente; le <b>sincrone</b> (eccezioni) nascono dal programma o dallo stato interno della CPU.",
+    trap:"⚑ Il tranello: è invertito: le asincrone sono hardware/esterne, le sincrone (eccezioni) sono legate all'esecuzione del programma."
+  },
+  {
+    topic:"Interruzioni",
+    q:"Qual è la differenza fra fault e trap nella gestione delle eccezioni?",
+    opts:[
+      "Il fault è gestito dopo l'incremento del PC, la trap prima",
+      "Il fault è rilevato e gestito PRIMA dell'esecuzione/incremento del PC (istruzione ritentabile); la trap DOPO (es. debugger, istruzione non ritentata)",
+      "Sono sinonimi",
+      "Il fault è un errore hardware irrecuperabile"
+    ],
+    correct:1,
+    expl:"Il <b>fault</b> (es. page fault) è rilevato prima dell'esecuzione e l'istruzione può essere ritentata; la <b>trap</b> (es. debug) avviene dopo l'incremento del PC e non viene ritentata.",
+    trap:"⚑ Il tranello: l'ordine è invertito: il fault precede l'esecuzione (ritentabile), la trap la segue. L'errore hardware irrecuperabile è l'abort."
+  },
+  {
+    topic:"Interruzioni",
+    q:"Nelle macchine Intel, cosa distingue NMI da INTR?",
+    opts:[
+      "NMI è mascherabile, INTR no",
+      "NMI è non mascherabile, INTR è mascherabile (con istruzioni STI/CLI)",
+      "Entrambi sono sempre mascherabili",
+      "Sono entrambi interruzioni software"
+    ],
+    correct:1,
+    expl:"<b>NMI</b> è la linea di interrupt hardware <b>non</b> mascherabile; <b>INTR</b> è mascherabile e si abilita/disabilita con le istruzioni STI/CLI (bit di flag IF).",
+    trap:"⚑ Il tranello: è invertito: NMI è l'interruzione che NON si può mascherare, mentre INTR può essere disabilitata via software."
+  },
+  {
+    topic:"Interruzioni",
+    t:"calcul",
+    q:"Interruzione vettorizzata Intel: l'identificatore n = 80h. A quale offset della tabella delle interruzioni punta (vettore di 4 byte ciascuno)?",
+    opts:["80h","200h","320h","20h"],
+    correct:1,
+    formula:"Offset = n × 4\nn = 80h = 128 (decimale)\nOffset = 128 × 4 = 512 = <em>200h</em>",
+    expl:"Ogni voce del vettore occupa 4 byte (CS:IP), quindi l'indirizzo nella tabella è <b>n × 4</b>: 128 × 4 = 512 = 200h.",
+    trap:"⚑ Il tranello: 320h si ottiene moltiplicando 80h (=128) per 4 ma trattando 80 come decimale (80×4=320): qui n è esadecimale (128)."
+  },
+  {
+    topic:"Interruzioni",
+    q:"Cosa salva la CPU Intel prima di eseguire la routine di servizio dell'interrupt (ISR)?",
+    opts:[
+      "Solo il contenuto della cache",
+      "L'indirizzo di ritorno (CS:IP dell'istruzione successiva) e il registro dei flag, ripristinati con IRET",
+      "L'intero contenuto della memoria",
+      "Nulla, perché l'interruzione è trasparente"
+    ],
+    correct:1,
+    expl:"La CPU salva <b>CS:IP</b> (indirizzo di ritorno) e il <b>registro dei flag</b>; al termine, l'istruzione <b>IRET</b> li ripristina riprendendo il programma interrotto.",
+    trap:"⚑ Il tranello: 'trasparente' non significa che non salva nulla: significa che ripristina perfettamente lo stato grazie ai dati salvati."
+  },
+  {
+    topic:"Interruzioni",
+    q:"Qual è il vantaggio del polling rispetto alle interruzioni, e il suo principale svantaggio?",
+    opts:[
+      "È asincrono ma molto complesso da implementare",
+      "È semplice (a controllo di programma) ma la CPU resta asservita alla velocità dell'I/O, sprecando tempo nell'interrogazione",
+      "Non occupa mai la CPU",
+      "Gestisce eventi asincroni meglio degli interrupt"
+    ],
+    correct:1,
+    expl:"Il <b>polling</b> è semplice (interrogazione esplicita a controllo di programma), ma tiene la CPU asservita alla velocità della periferica, sprecando cicli in attesa; gli interrupt gestiscono eventi <b>asincroni</b> liberando la CPU.",
+    trap:"⚑ Il tranello: la gestione efficiente di eventi asincroni è il punto di forza degli <b>interrupt</b>, non del polling."
+  },
+  // --- DMA ---
+  {
+    topic:"DMA",
+    q:"Qual è lo scopo del DMA (Direct Memory Access)?",
+    opts:[
+      "Far eseguire alla CPU un programma di trasferimento più veloce",
+      "Collegare direttamente in hardware memoria e I/O senza far passare i dati attraverso la CPU",
+      "Aumentare la frequenza di clock della CPU",
+      "Sostituire la cache con la memoria centrale"
+    ],
+    correct:1,
+    expl:"Il <b>DMA</b> permette a una periferica di interfacciarsi direttamente con la memoria, sotto controllo del DMAC, <b>senza</b> far transitare i dati per la CPU né eseguire codice.",
+    trap:"⚑ Il tranello: il DMA NON fa eseguire un programma più veloce alla CPU: la bypassa del tutto per il trasferimento."
+  },
+  {
+    topic:"DMA",
+    q:"Cosa fa il DMAC durante un trasferimento?",
+    opts:[
+      "Resta sempre subordinato alla CPU senza mai controllare il bus",
+      "Prende il controllo del bus diventando master al posto della CPU e gestisce il trasferimento",
+      "Disabilita permanentemente la CPU",
+      "Esegue le istruzioni del programma utente"
+    ],
+    correct:1,
+    expl:"Il <b>DMAC</b> diventa <b>master del bus</b> al posto della CPU: indirizza memoria e I/O, gestisce i segnali di controllo, incrementa gli indirizzi e arbitra l'accesso al bus.",
+    trap:"⚑ Il tranello: il DMAC non resta subordinato: il senso del DMA è proprio che assume il controllo del bus per il trasferimento."
+  },
+  {
+    topic:"DMA",
+    q:"Come avvisa il DMAC la CPU al termine del trasferimento di un blocco?",
+    opts:[
+      "Tramite polling continuo della CPU",
+      "Generando un'interruzione (INT) quando il contatore di byte raggiunge la lunghezza del blocco",
+      "Spegnendo la CPU",
+      "Non avvisa, la CPU se ne accorge da sola"
+    ],
+    correct:1,
+    expl:"Quando il contatore di byte eguaglia la lunghezza del blocco, il DMAC genera un'<b>interruzione (INT)</b> per avvisare la CPU che il trasferimento è completato.",
+    trap:"⚑ Il tranello: sarebbe controproducente usare il polling: il DMA nasce proprio per liberare la CPU, che viene avvisata via interrupt a fine blocco."
+  }
+];
+
+/* ---------- render ---------- */
+const quizEl = document.getElementById('quiz');
+const filterEl = document.getElementById('filter');
+const toggleEl = document.getElementById('onlyCalc');
+const finalEl = document.getElementById('final');
+const LET = ['A','B','C','D'];
+let answered = 0, correctCount = 0, onlyCalc = false;
+
+const topics = [...new Set(Q.map(q=>q.topic))];
+filterEl.innerHTML = '<option value="__all">Tutti gli argomenti</option>' +
+  topics.map(t=>`<option value="${t}">${t}</option>`).join('');
+
+Q.forEach((q,i)=>{
+  const card = document.createElement('article');
+  card.className = 'card';
+  card.dataset.topic = q.topic;
+  card.dataset.calc = q.t === 'calcul' ? '1' : '0';
+  card.dataset.idx = i;
+
+  const calcBadge = q.t === 'calcul' ? '<span class="badge calc">calcul</span>' : '';
+  card.innerHTML = `
+    <div class="qhead">
+      <div class="qnum">${i+1}</div>
+      <div>
+        <div class="badges"><span class="badge">${q.topic}</span>${calcBadge}</div>
+      </div>
+    </div>
+    <div class="qtext">${q.q}</div>
+    <ul class="opts">
+      ${q.opts.map((o,j)=>`
+        <li class="opt" data-j="${j}">
+          <span class="letter">${LET[j]}</span>
+          <span class="txt">${o}</span>
+        </li>`).join('')}
+    </ul>
+    <div class="reveal">
+      ${q.formula ? `<div class="formula">${q.formula}</div>` : ''}
+      <p class="expl">${q.expl}</p>
+      ${q.trap ? `<div class="trap"><b>⚑ Il tranello:</b> ${q.trap.replace(/^⚑ Il tranello:\s*/,'')}</div>` : ''}
+    </div>`;
+
+  const optsWrap = card.querySelector('.opts');
+  card.querySelectorAll('.opt').forEach(opt=>{
+    opt.addEventListener('click',()=>{
+      if(card.classList.contains('locked')) return;
+      const j = +opt.dataset.j;
+      card.classList.add('locked');
+      optsWrap.classList.add('locked');
+      const correct = card.querySelector(`.opt[data-j="${q.correct}"]`);
+      correct.classList.add('correct');
+      correct.insertAdjacentHTML('beforeend','<span class="mark">✓ giusta</span>');
+      if(j === q.correct){
+        card.classList.add('ok');
+        correctCount++;
+      } else {
+        opt.classList.add('wrong');
+        opt.insertAdjacentHTML('beforeend','<span class="mark">✗ la tua</span>');
+        card.classList.add('no');
+      }
+      answered++;
+      updateHud();
+    });
+  });
+
+  quizEl.appendChild(card);
+});
+
+function updateHud(){
+  const total = Q.length;
+  document.getElementById('score').textContent =
+    `Punteggio ${correctCount}/${total} · ${answered} risposte`;
+  document.getElementById('prog').style.width = (answered/total*100)+'%';
+  if(answered === total) showFinal();
+}
+
+function applyFilters(){
+  const val = filterEl.value;
+  quizEl.querySelectorAll('.card').forEach(c=>{
+    const topicOk = (val === '__all') || (c.dataset.topic === val);
+    const calcOk = !onlyCalc || c.dataset.calc === '1';
+    c.style.display = (topicOk && calcOk) ? '' : 'none';
+  });
+}
+filterEl.addEventListener('change',applyFilters);
+toggleEl.addEventListener('click',()=>{
+  onlyCalc = !onlyCalc;
+  toggleEl.classList.toggle('on',onlyCalc);
+  toggleEl.setAttribute('aria-pressed',onlyCalc);
+  toggleEl.textContent = onlyCalc ? 'Tutte le domande' : 'Solo calcoli';
+  applyFilters();
+});
+
+function showFinal(){
+  const total = Q.length;
+  const pct = correctCount/total*100;
+  document.getElementById('finalScore').textContent = `${correctCount}/${total}`;
+  let msg, sub;
+  if(pct === 100){ msg='Perfetto'; sub='Padronanza completa del parallelismo. Sei pronto per l\u2019esame.'; }
+  else if(pct >= 75){ msg='Ottimo'; sub='Conosci bene la materia: rivedi solo i pochi punti sbagliati.'; }
+  else if(pct >= 50){ msg='Discreto'; sub='Base solida ma con lacune: ripassa Amdahl, Flynn, MESI e le tecniche di multiple issue.'; }
+  else { msg='Da riprendere'; sub='Conviene rileggere il capitolo da HPC fino a DMA e interruzioni, poi rifare il quiz.'; }
+  document.getElementById('finalMsg').textContent = msg;
+  document.getElementById('finalSub').textContent = sub;
+  finalEl.classList.add('show');
+  finalEl.scrollIntoView({behavior:'smooth'});
+}
+
+updateHud();
+</script>
+</body>
+</html>

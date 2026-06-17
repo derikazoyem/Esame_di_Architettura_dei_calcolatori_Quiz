@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz · Esecuzione Multiciclo e Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4efe6;
+    --ink:#1c1a17;
+    --accent:#7a1f2b;        /* rosso UNIMORE come colore tematico del corso */
+    --accent-soft:#9c3340;
+    --green:#1f5d4c;
+    --red:#a3302a;
+    --gold:#b8860b;
+    --line:#d8cfbf;
+    --card:#fbf8f1;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Spectral',Georgia,serif;font-size:18px;line-height:1.55;
+  }
+  /* ---------- HUD ---------- */
+  .hud{
+    position:sticky;top:0;z-index:50;background:rgba(244,239,230,.94);
+    backdrop-filter:blur(6px);border-bottom:1px solid var(--line);
+    padding:.6rem clamp(1rem,4vw,3rem);
+  }
+  .bar{height:7px;background:var(--line);border-radius:6px;overflow:hidden;margin-bottom:.6rem;}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .4s ease;}
+  .hud-row{display:flex;flex-wrap:wrap;gap:.7rem .9rem;align-items:center;}
+  .score{font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:700;letter-spacing:.02em;}
+  select,.toggle{
+    font-family:'JetBrains Mono',monospace;font-size:.78rem;
+    border:1px solid var(--line);background:var(--card);color:var(--ink);
+    padding:.4rem .7rem;border-radius:7px;cursor:pointer;
+  }
+  .toggle.on{background:var(--gold);color:#fff;border-color:var(--gold);}
+  /* ---------- header ---------- */
+  header.top{padding:clamp(2rem,6vw,4rem) clamp(1rem,4vw,3rem) 1rem;max-width:840px;margin:0 auto;}
+  header.top .eyebrow{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);}
+  header.top h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(2rem,6vw,3.4rem);line-height:1.02;margin:.3rem 0 .4rem;}
+  header.top p{color:#5b554c;margin:0;max-width:60ch;}
+  /* ---------- cards ---------- */
+  main{max-width:840px;margin:0 auto;padding:1rem clamp(1rem,4vw,3rem) 4rem;}
+  .card{
+    position:relative;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:1.4rem 1.5rem 1.5rem;margin:1.4rem 0;
+    overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.03);
+  }
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--line);transition:background .3s;}
+  .card.ok::before{background:var(--green);}
+  .card.no::before{background:var(--red);}
+  .qhead{display:flex;align-items:flex-start;gap:.8rem;margin-bottom:.5rem;flex-wrap:wrap;}
+  .qnum{font-family:'Fraunces',serif;font-weight:900;font-size:2.1rem;line-height:.9;color:var(--accent);min-width:1.4em;}
+  .badges{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-top:.35rem;}
+  .badge{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;padding:.22rem .5rem;border-radius:20px;background:#ece3d3;color:#6a6253;font-weight:700;}
+  .badge.calc{background:var(--gold);color:#fff;}
+  .qtext{font-size:1.12rem;font-weight:500;margin:.4rem 0 1rem;}
+  .opts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.55rem;}
+  .opt{
+    display:flex;gap:.7rem;align-items:flex-start;border:1px solid var(--line);
+    background:#fff;border-radius:9px;padding:.7rem .85rem;cursor:pointer;
+    transition:border-color .15s,background .15s;
+  }
+  .opt:hover{border-color:var(--accent-soft);}
+  .opt .letter{
+    flex:0 0 auto;width:1.7rem;height:1.7rem;border-radius:6px;background:#ece3d3;
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.85rem;
+    display:flex;align-items:center;justify-content:center;color:#6a6253;
+  }
+  .opt .txt{flex:1;}
+  .locked .opt{cursor:default;}
+  .opt.correct{border-color:var(--green);background:#eef5f1;}
+  .opt.correct .letter{background:var(--green);color:#fff;}
+  .opt.wrong{border-color:var(--red);background:#f8edec;}
+  .opt.wrong .letter{background:var(--red);color:#fff;}
+  .mark{font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;margin-left:auto;align-self:center;white-space:nowrap;}
+  .opt.correct .mark{color:var(--green);}
+  .opt.wrong .mark{color:var(--red);}
+  /* reveal blocks */
+  .reveal{display:none;margin-top:1.1rem;animation:fade .35s ease;}
+  .locked .reveal{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  .formula{
+    font-family:'JetBrains Mono',monospace;font-size:.85rem;line-height:1.7;
+    background:#f1f6f3;border-left:4px solid var(--green);border-radius:0 8px 8px 0;
+    padding:.8rem 1rem;margin:.3rem 0 .9rem;white-space:pre-wrap;
+  }
+  .formula em{font-style:normal;color:var(--red);font-weight:700;background:#fcefe3;padding:0 .25em;border-radius:3px;}
+  .expl{margin:.2rem 0;}
+  .expl b{color:var(--accent);}
+  .trap{
+    background:#f8edec;border-left:4px solid var(--red);border-radius:0 8px 8px 0;
+    padding:.7rem 1rem;margin-top:.9rem;font-size:.97rem;
+  }
+  .trap b{color:var(--red);}
+  /* ---------- final ---------- */
+  #final{display:none;text-align:center;padding:3rem clamp(1rem,4vw,3rem) 5rem;max-width:680px;margin:0 auto;}
+  #final.show{display:block;animation:fade .5s ease;}
+  #final .big{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(3rem,12vw,6rem);line-height:1;color:var(--accent);}
+  #final .lbl{font-family:'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase;font-size:.8rem;color:#6a6253;}
+  #final h2{font-family:'Fraunces',serif;font-size:1.8rem;margin:1.2rem 0 .5rem;}
+  #final p{color:#5b554c;}
+  .restart{
+    margin-top:1.5rem;font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:9px;padding:.8rem 1.6rem;cursor:pointer;letter-spacing:.04em;
+  }
+  .restart:hover{background:var(--accent-soft);}
+  .hidden{display:none !important;}
+  @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="bar"><i id="prog"></i></div>
+  <div class="hud-row">
+    <span class="score" id="score">Punteggio 0/0 · 0 risposte</span>
+    <select id="filter" aria-label="Filtra per argomento"></select>
+    <button class="toggle" id="onlyCalc" aria-pressed="false">Solo calcoli</button>
+  </div>
+</div>
+
+<header class="top">
+  <div class="eyebrow">Architettura dei Calcolatori · UNIMORE</div>
+  <h1>Esecuzione Multiciclo<br>e Pipeline</h1>
+  <p>Quiz di autovalutazione sul Cap. 6. Clicca una risposta per bloccarla e leggere spiegazione, formula e tranello. Usa i filtri in alto per concentrarti su un argomento o sui soli esercizi di calcolo.</p>
+</header>
+
+<main id="quiz"></main>
+
+<section id="final">
+  <div class="lbl">Punteggio finale</div>
+  <div class="big" id="finalScore">0/0</div>
+  <h2 id="finalMsg"></h2>
+  <p id="finalSub"></p>
+  <button class="restart" onclick="location.reload()">Ricomincia</button>
+</section>
+
+<script>
+const Q = [
+  // --- Bus e architettura di base ---
+  {
+    topic:"Sistema di bus",
+    q:"Nel sistema di bus, qual è la funzione del bus di indirizzi (address bus)?",
+    opts:[
+      "Trasferire gli indirizzi che servono primariamente alla memoria ma anche ai moduli di I/O",
+      "Trasferire bidirezionalmente i dati da e verso le varie unità",
+      "Contenere tutti i segnali di controllo da e per la CPU",
+      "Sincronizzare il clock fra CPU e periferiche"
+    ],
+    correct:0,
+    expl:"L'<b>address bus</b> trasporta gli indirizzi, necessari soprattutto alla memoria ma utilizzati anche dai moduli di I/O per selezionare la locazione o il registro coinvolto.",
+    trap:"⚑ Il tranello: il trasferimento bidirezionale dei dati è compito del <b>bus di dati</b>, non dell'address bus. È facile confondere i tre bus."
+  },
+  {
+    topic:"Sistema di bus",
+    q:"Dal punto di vista della CPU, cosa significa un'operazione di 'lettura' sul bus dati?",
+    opts:[
+      "L'invio di un dato dalla CPU verso la memoria",
+      "L'acquisizione di un dato verso la CPU (o l'unità che gestisce il trasferimento)",
+      "L'attivazione del segnale di chip select",
+      "Il trasferimento dell'indirizzo sull'address bus"
+    ],
+    correct:1,
+    expl:"Il verso è sempre <b>visto dalla CPU</b>: la lettura è l'acquisizione di un dato verso la CPU, mentre la scrittura è l'operazione opposta.",
+    trap:"⚑ Il tranello: l'invio di un dato dalla CPU verso la memoria è la <b>scrittura</b>, ossia l'operazione opposta alla lettura."
+  },
+  // --- ALU e controllo ---
+  {
+    topic:"ALU e controllo",
+    q:"Quante linee di controllo usa la ALU elementare vista a lezione per distinguere le operazioni?",
+    opts:["2 linee","3 linee","4 linee","8 linee"],
+    correct:2,
+    expl:"La ALU elementare presenta <b>4 linee di controllo</b> (es. 0010 = add, 0110 = subtract, 0000 = AND, 0001 = OR).",
+    trap:"⚑ Il tranello: i <b>2 bit</b> sono il campo ALUOp che l'UC invia alla ALU, non le linee di controllo interne della ALU (che sono 4)."
+  },
+  {
+    topic:"ALU e controllo",
+    q:"Nella tabella della ALU, a quale codice di controllo corrisponde l'operazione 'subtract'?",
+    opts:["0010","0001","0110","1100"],
+    correct:2,
+    expl:"Il codice <b>0110</b> seleziona la sottrazione; 0010 è add, 0001 è OR, 0000 è AND, 1100 è NOR.",
+    trap:"⚑ Il tranello: <b>0010</b> è la somma (add). Sommatore e sottrattore hanno codici simili e si scambiano facilmente."
+  },
+  {
+    topic:"ALU e controllo",
+    q:"Per un'istruzione di tipo R, come fa il controllo della ALU a sapere l'esatta operazione da eseguire?",
+    opts:[
+      "Riceve direttamente i 4 bit di controllo dall'UC centrale",
+      "Guarda i campi funz3 e funz7 dell'istruzione",
+      "Legge il campo immediato esteso a 32 bit",
+      "Usa solo il segnale ALUSrc"
+    ],
+    correct:1,
+    expl:"Tutte le istruzioni di tipo R hanno lo stesso opcode e si distinguono in base a <b>funz3 e funz7</b>, che il controllo della ALU esamina per scegliere l'operazione.",
+    trap:"⚑ Il tranello: ricevere direttamente i 4 bit dall'UC è ciò che avviene per <b>ld/sd/beq</b>, dove funz3 e funz7 sono 'don't care' (XXX)."
+  },
+  {
+    topic:"ALU e controllo",
+    q:"Perché nei casi ld/sd/beq i campi funz3 e funz7 sono indicati con XXX (don't care)?",
+    opts:[
+      "Perché quelle istruzioni non usano mai la ALU",
+      "Perché l'UC passa direttamente alla ALU l'operazione da fare, quindi la ALU non guarda quei campi",
+      "Perché i campi funz3/funz7 non esistono in quelle istruzioni",
+      "Perché la ALU calcola l'operazione in base al PC"
+    ],
+    correct:1,
+    expl:"Un <b>termine indifferente (don't care)</b> è una variabile d'ingresso che non ha effetto sull'uscita: per ld/sd/beq l'UC fornisce già il codice operativo alla ALU, che quindi ignora funz3/funz7.",
+    trap:"⚑ Il tranello: la ALU viene comunque usata (per la somma dell'indirizzo o la sottrazione del beq): non è vero che 'non usano la ALU'."
+  },
+  {
+    topic:"ALU e controllo",
+    q:"Quale operazione deve eseguire la ALU per un'istruzione beq (branch if equal)?",
+    opts:["Una somma","Una sottrazione","Un AND","Uno shift a sinistra"],
+    correct:1,
+    expl:"Per confrontare l'uguaglianza la ALU esegue una <b>sottrazione</b> tra i due operandi: se il risultato è 0 l'uscita Zero vale 1 e i registri sono uguali.",
+    trap:"⚑ Il tranello: la <b>somma</b> è l'operazione di ld/sd (calcolo indirizzo base+offset), non del confronto di uguaglianza."
+  },
+  // --- Segnali di controllo ---
+  {
+    topic:"Segnali di controllo",
+    q:"Quale segnale di controllo NON è impostato direttamente dall'unità di controllo in base al solo codice operativo?",
+    opts:["RegWrite","ALUSrc","PCSrc","MemRead"],
+    correct:2,
+    expl:"L'UC imposta tutti i segnali tranne <b>PCSrc</b>, che dipende anche dall'uscita Zero della ALU (Branch AND Zero).",
+    trap:"⚑ Il tranello: RegWrite, ALUSrc e MemRead dipendono solo dal codop. PCSrc è l'eccezione perché serve l'esito del confronto."
+  },
+  {
+    topic:"Segnali di controllo",
+    q:"Come viene generato il segnale PCSrc in una branch?",
+    opts:[
+      "Branch OR Zero della ALU",
+      "Branch AND Zero della ALU",
+      "Direttamente dal codop senza altri ingressi",
+      "MemRead AND Branch"
+    ],
+    correct:1,
+    expl:"PCSrc è 'acceso' quando l'istruzione è un branch <b>e</b> l'uscita Zero della ALU vale 1: si collega in <b>AND</b> il segnale Branch (dall'UC) con Zero.",
+    trap:"⚑ Il tranello: un <b>OR</b> attiverebbe il salto anche con condizione falsa o con istruzioni non-branch. Serve l'AND di entrambe le condizioni."
+  },
+  {
+    topic:"Segnali di controllo",
+    q:"Durante l'esecuzione di una beq, quale valore assume il segnale ALUSrc?",
+    opts:[
+      "1, perché il secondo operando viene dall'immediato esteso",
+      "0, perché si deve fare la sottrazione tra x1 e x2 (entrambi registri)",
+      "È don't care perché la ALU non lavora",
+      "1, perché serve il calcolo dell'indirizzo di salto"
+    ],
+    correct:1,
+    expl:"In beq la ALU sottrae i due registri x1 e x2, quindi il secondo operando proviene dal register file: <b>ALUSrc = 0</b>.",
+    trap:"⚑ Il tranello: ALUSrc = 1 seleziona l'immediato esteso, caso tipico di ld/sd. Nel beq i due operandi sono entrambi registri."
+  },
+  {
+    topic:"Segnali di controllo",
+    q:"Nell'esecuzione di una beq, lo shift sull'estensione dei bit immediati è di quanto?",
+    opts:["Shift di 1 a sinistra","Shift di 2 a sinistra","Shift di 4 a destra","Nessuno shift"],
+    correct:0,
+    expl:"L'offset del branch viene <b>shiftato di 1 a sinistra</b> e poi sommato al PC per ottenere l'indirizzo di destinazione.",
+    trap:"⚑ Il tranello: lo shift di 2 compare nello schema generale della pipeline RISC-V con immediato; nel flusso beq descritto è di 1 posizione."
+  },
+  // --- Esecuzione multiciclo / ILP ---
+  {
+    topic:"Multiciclo e ILP",
+    q:"Cosa si intende con Instruction Level Parallelism (ILP)?",
+    opts:[
+      "L'insieme delle soluzioni architetturali per sfruttare il parallelismo nell'esecuzione di una sequenza di istruzioni dentro una singola CPU",
+      "L'esecuzione di programmi diversi su core fisici distinti",
+      "La suddivisione della memoria in più banchi indipendenti",
+      "L'uso di più ALU per una singola istruzione monociclo"
+    ],
+    correct:0,
+    expl:"L'<b>ILP</b> raccoglie le tecniche (pipelining, out-of-order, ...) per sfruttare parallelismo temporale e spaziale nell'esecuzione di istruzioni dentro una singola CPU/core, riducendo il CPI e aumentando il throughput.",
+    trap:"⚑ Il tranello: eseguire programmi su core distinti è il parallelismo <b>multicore</b>, concetto adiacente ma diverso dall'ILP intra-core."
+  },
+  {
+    topic:"Multiciclo e ILP",
+    q:"Qual è l'obiettivo principale delle tecniche ILP come il pipelining?",
+    opts:[
+      "Ridurre la latenza della singola istruzione",
+      "Ridurre il CPI medio e aumentare il throughput",
+      "Diminuire il numero di stadi della CPU",
+      "Eliminare la necessità della memoria cache"
+    ],
+    correct:1,
+    expl:"Le tecniche ILP puntano a <b>ridurre il CPI</b> medio e aumentare il throughput eseguendo attività in parallelo.",
+    trap:"⚑ Il tranello: la <b>latenza</b> della singola istruzione di solito NON diminuisce (anzi aumenta per i registri intermedi): ciò che migliora è il throughput."
+  },
+  {
+    topic:"Multiciclo e ILP",
+    q:"Il primo esempio storico di disaccoppiamento fetch/esecuzione (buffer di prefetch nell'8086) può essere definito vero pipelining?",
+    opts:[
+      "Sì, è il primo vero pipelining a 5 stadi",
+      "No, non è tecnicamente pipelining: solo due attività disaccoppiate per tenere occupata la parte più lenta",
+      "Sì, perché usa la Bus Interface Unit",
+      "No, perché l'8086 non aveva una ALU"
+    ],
+    correct:1,
+    expl:"Nell'8086 il prefetch buffer disaccoppia il fetch dalla decodifica/esecuzione: <b>non è tecnicamente pipelining</b>, ma anticipa l'idea tenendo occupata l'interfaccia con la memoria (la parte più lenta).",
+    trap:"⚑ Il tranello: la presenza della BIU non rende l'8086 una pipeline a stadi: è solo un disaccoppiamento di due attività."
+  },
+  // --- Pipeline RISC: stadi ---
+  {
+    topic:"Stadi pipeline RISC",
+    q:"In quale ordine sono disposti i cinque stadi della pipeline RISC-V classica?",
+    opts:[
+      "IF → ID → EX → MEM → WB",
+      "ID → IF → EX → WB → MEM",
+      "IF → EX → ID → MEM → WB",
+      "IF → ID → MEM → EX → WB"
+    ],
+    correct:0,
+    expl:"Gli stadi sono <b>IF</b> (fetch), <b>ID</b> (decode + lettura registri), <b>EX</b> (esecuzione), <b>MEM</b> (accesso memoria) e <b>WB</b> (write back).",
+    trap:"⚑ Il tranello: la decodifica (ID) viene sempre dopo il fetch (IF), e l'accesso a memoria (MEM) dopo l'esecuzione (EX)."
+  },
+  {
+    topic:"Stadi pipeline RISC",
+    q:"Cosa avviene nello stadio ID (Instruction Decode)?",
+    opts:[
+      "Lettura dell'istruzione dalla memoria istruzioni",
+      "Decodifica dell'istruzione e lettura degli operandi dai registri",
+      "Scrittura del risultato nel registro destinazione",
+      "Attivazione della memoria dati"
+    ],
+    correct:1,
+    expl:"Nello stadio <b>ID</b> l'istruzione viene decodificata e si leggono gli operandi dal register file (con estensione del segno dell'immediato).",
+    trap:"⚑ Il tranello: la lettura dell'istruzione dalla memoria è lo stadio <b>IF</b>; la scrittura del risultato è lo stadio WB."
+  },
+  {
+    topic:"Stadi pipeline RISC",
+    q:"Perché la parte di esecuzione è stata divisa in tre stadi (EX, MEM, WB)?",
+    opts:[
+      "Per ridurre il numero totale di registri",
+      "Pensando al caso dell'istruzione più lunga, ossia la lettura dalla memoria (load)",
+      "Perché le istruzioni aritmetiche richiedono tre passaggi nella ALU",
+      "Per eliminare lo stadio di fetch"
+    ],
+    correct:1,
+    expl:"La divisione in tre parti nasce dal caso dell'istruzione più lunga, la <b>load</b>: EX calcola l'indirizzo, MEM legge la locazione, WB salva nel registro.",
+    trap:"⚑ Il tranello: non è l'istruzione aritmetica a richiedere tre passi: è la load (accesso a memoria) a dettare la suddivisione più fine."
+  },
+  {
+    topic:"Stadi pipeline RISC",
+    q:"In una pipeline, cosa fa un'istruzione che non necessita di un certo stadio?",
+    opts:[
+      "Salta direttamente allo stadio successivo utile, accorciando il percorso",
+      "Attraversa comunque lo stadio in 'idle' per sincronizzare il processo",
+      "Viene rimossa dalla pipeline",
+      "Forza tutte le altre istruzioni a saltare quello stadio"
+    ],
+    correct:1,
+    expl:"Tutte le istruzioni passano attraverso lo <b>stesso numero di stadi</b>: se uno stadio non serve, l'istruzione vi sosta in idle pur di mantenere la sincronizzazione.",
+    trap:"⚑ Il tranello: saltare lo stadio romperebbe la sincronizzazione della pipeline. La latenza della singola istruzione può aumentare, ma il flusso resta ordinato."
+  },
+  {
+    topic:"Stadi pipeline RISC",
+    q:"Per l'istruzione ld r1,(r2+5), in quale stadio viene calcolato l'indirizzo r2+5?",
+    opts:["IF","ID","EX","MEM"],
+    correct:2,
+    expl:"Nella fase <b>EX</b> la ALU calcola l'indirizzo (registro base + spiazzamento immediato); in MEM la locazione viene letta e in WB salvata in r1.",
+    trap:"⚑ Il tranello: in MEM la locazione viene letta, ma il calcolo dell'indirizzo avviene prima, nella fase EX."
+  },
+  // --- Pipeline Intel ---
+  {
+    topic:"Pipeline Intel",
+    q:"Nel processore Intel 80486, perché la pipeline a 5 stadi dedica due stadi alla decodifica anziché all'esecuzione?",
+    opts:[
+      "Perché l'esecuzione era estremamente lenta",
+      "Perché la decodifica, a causa dell'unità di controllo con microcodice, era molto lunga",
+      "Perché non aveva una unità ALU integrata",
+      "Per poter eseguire due istruzioni per ciclo"
+    ],
+    correct:1,
+    expl:"Nell'80486 la fase di <b>decodifica</b> era molto lunga per via dell'unità di controllo a microcodice, quindi furono dedicati due stadi (s2 e s3) a decodifica e fetch degli operandi.",
+    trap:"⚑ Il tranello: nel RISC-V è l'esecuzione/memoria a essere divisa; nell'80486 il collo di bottiglia è la decodifica microcodificata."
+  },
+  // --- Registri di pipeline ---
+  {
+    topic:"Registri di pipeline",
+    q:"A cosa servono i registri di pipeline (IF/ID, ID/EX, EX/MEM, MEM/WB)?",
+    opts:[
+      "A memorizzare in modo permanente i risultati del programma",
+      "A mantenere dati, istruzione e segnali di controllo tra uno stadio e il successivo",
+      "A sostituire la memoria dati",
+      "A generare il segnale di clock"
+    ],
+    correct:1,
+    expl:"I registri di pipeline sono memorie intermedie che conservano data path, istruzione e <b>segnali di controllo</b> tra uno stadio e il successivo, sincronizzando le fasi.",
+    trap:"⚑ Il tranello: non memorizzano risultati in modo permanente (quello è il register file/memoria): sono buffer temporanei tra stadi."
+  },
+  {
+    topic:"Registri di pipeline",
+    q:"Perché il registro IF/ID deve essere ampio 64 bit nell'esempio del testo?",
+    opts:[
+      "Perché contiene solo l'istruzione a 32 bit, duplicata",
+      "Perché deve contenere sia l'istruzione (32 bit) sia il PC incrementato di 4 (32 bit)",
+      "Perché memorizza due istruzioni complete da 32 bit",
+      "Perché il bus dati è a 64 bit"
+    ],
+    correct:1,
+    expl:"IF/ID è ampio <b>64 bit</b> perché deve contenere l'istruzione prelevata (32 bit) e il contenuto del PC incrementato di 4 (32 bit).",
+    trap:"⚑ Il tranello: non sono due istruzioni: sono l'istruzione e il PC+4, due quantità diverse da 32 bit ciascuna."
+  },
+  {
+    topic:"Registri di pipeline",
+    q:"Perché anche i segnali in uscita dall'unità di controllo vengono posti nei registri di pipeline?",
+    opts:[
+      "Per ridurre il consumo energetico della CPU",
+      "Perché devono essere usati negli stadi successivi al momento giusto (EX, poi MEM, poi WB)",
+      "Perché l'UC funziona a una frequenza diversa",
+      "Per evitare di decodificare l'istruzione"
+    ],
+    correct:1,
+    expl:"I segnali di controllo vengono <b>ritardati con registri</b> così da essere applicati nello stadio corretto: prima quelli di EX, poi MEM, infine WB.",
+    trap:"⚑ Il tranello: non è una questione di consumo o frequenza: è una questione di tempistica, ogni segnale deve agire nello stadio giusto."
+  },
+  {
+    topic:"Registri di pipeline",
+    q:"Da cosa dipende il periodo di clock di una pipeline sincrona?",
+    opts:[
+      "Dalla somma dei tempi di tutti gli stadi",
+      "Dal tempo massimo di attraversamento dello stadio più lento (più il ritardo dei registri)",
+      "Dal tempo medio degli stadi",
+      "Dal numero di istruzioni in coda"
+    ],
+    correct:1,
+    expl:"Il periodo di clock è dettato dallo <b>stadio più lento</b>, più il ritardo dei registri intermedi: tutti gli stadi sono sincronizzati su quel tempo.",
+    trap:"⚑ Il tranello: la somma dei tempi di tutti gli stadi è la latenza dell'intera pipeline, non il periodo di clock."
+  },
+  // --- Esecuzione esempio LW/SW/ADD/SUB ---
+  {
+    topic:"Esempio LW/SW/ADD/SUB",
+    q:"Nel quinto stadio della pipeline (write back) di una load, dove finisce il dato letto dalla memoria?",
+    opts:[
+      "Viene riscritto nella memoria dati",
+      "Viene posto nel register file (es. R[r1] ← MDR)",
+      "Viene inviato al PC",
+      "Viene scartato come dato sporco"
+    ],
+    correct:1,
+    expl:"In <b>write back</b> il contenuto letto (in MDR) viene scritto nel register file, ad esempio R[r1] ← MDR per la load.",
+    trap:"⚑ Il tranello: il termine 'write back' della pipeline è omonimo ma <b>non</b> ha a che vedere con la politica write-back della gerarchia di memoria."
+  },
+  {
+    topic:"Esempio LW/SW/ADD/SUB",
+    q:"Operazione descritta nel fetch: quale sequenza di micro-operazioni è corretta?",
+    opts:[
+      "IR ← PC ; PC ← MDR ; MAR ← PC+4",
+      "MAR ← PC ; PC ← PC+4 ; MDR ← M[MAR] ; IR ← MDR",
+      "MDR ← PC ; IR ← M[PC] ; PC ← PC+4",
+      "PC ← M[MAR] ; IR ← PC ; MAR ← MDR"
+    ],
+    correct:1,
+    expl:"Nel fetch: <b>MAR ← PC</b>, poi PC ← PC+4, si legge MDR ← M[MAR] e infine IR ← MDR.",
+    trap:"⚑ Il tranello: le altre sequenze invertono i ruoli di IR, PC e MDR: l'indirizzo passa per MAR, il dato letto per MDR, l'istruzione finisce in IR."
+  },
+  {
+    topic:"Esempio LW/SW/ADD/SUB",
+    q:"Quando la prima istruzione LW è in fase di esecuzione (EX), in che stato sono le altre istruzioni della sequenza LW, SW, ADD?",
+    opts:[
+      "SW in decodifica (ID), ADD in fetch (IF)",
+      "SW in esecuzione (EX), ADD in decodifica (ID)",
+      "SW in fetch (IF), ADD ancora non entrata",
+      "Tutte in esecuzione contemporaneamente"
+    ],
+    correct:0,
+    expl:"Mentre LW è in EX, la <b>SW</b> è in decodifica (ID) e si fa il fetch della <b>ADD</b>: ogni istruzione occupa uno stadio diverso.",
+    trap:"⚑ Il tranello: due istruzioni non possono stare nello stesso stadio contemporaneamente: ciò creerebbe un conflitto di risorse."
+  },
+  // --- Condizioni di funzionamento ---
+  {
+    topic:"Condizioni di funzionamento",
+    q:"Quale di queste è una condizione necessaria perché il pipelining funzioni?",
+    opts:[
+      "Tutte le istruzioni devono avere la stessa lunghezza in byte",
+      "La sovrapposizione di operazioni non deve creare conflitti di risorse (es. doppio accesso alla stessa memoria)",
+      "La pipeline deve avere esattamente 5 stadi",
+      "Il clock deve usare solo il fronte di salita"
+    ],
+    correct:1,
+    expl:"Serve che la sovrapposizione <b>non crei conflitti di risorse</b>: per questo occorrono due memorie (istruzioni e dati) e i registri intermedi.",
+    trap:"⚑ Il tranello: il numero di stadi e l'uso dei fronti di clock sono scelte implementative, non condizioni necessarie per il funzionamento."
+  },
+  {
+    topic:"Condizioni di funzionamento",
+    q:"Perché in una pipeline servono due memorie separate (istruzioni e dati)?",
+    opts:[
+      "Per raddoppiare la capacità totale di memoria",
+      "Per evitare conflitti di risorsa fra il fetch dell'istruzione e l'accesso ai dati nello stesso ciclo",
+      "Perché la memoria dati è più veloce di quella istruzioni",
+      "Per poter eseguire istruzioni a 64 bit"
+    ],
+    correct:1,
+    expl:"Con una sola memoria, lo stadio IF (fetch) e lo stadio MEM (accesso dati) potrebbero richiederla nello stesso ciclo creando un <b>conflitto di risorse</b>: due memorie lo evitano.",
+    trap:"⚑ Il tranello: non si tratta di capacità o velocità, ma di accessi simultanei: il problema è la contesa della stessa risorsa."
+  },
+  {
+    topic:"Condizioni di funzionamento",
+    q:"I registri di pipeline sono descritti come memorie a doppia porta. Cosa comporta questa caratteristica?",
+    opts:[
+      "Possono essere letti e scritti contemporaneamente",
+      "Hanno capacità doppia rispetto ai normali registri",
+      "Funzionano solo in lettura",
+      "Richiedono due cicli di clock per essere aggiornati"
+    ],
+    correct:0,
+    expl:"Essendo a <b>doppia porta</b>, i registri di pipeline possono essere letti (dallo stadio successivo) e scritti (dallo stadio precedente) nello stesso istante.",
+    trap:"⚑ Il tranello: doppia porta non significa capacità doppia, ma due accessi simultanei indipendenti (uno in lettura, uno in scrittura)."
+  },
+  // --- Prestazioni: calcoli ---
+  {
+    topic:"Prestazioni",
+    t:"calcul",
+    q:"Con k stadi e n istruzioni, qual è il tempo di esecuzione su macchina sequenziale (Tseq)?",
+    opts:["Tseq = (k + n − 1)·Ts","Tseq = n·k·Ts","Tseq = k·Ts","Tseq = n·Ts"],
+    correct:1,
+    formula:"In sequenziale ogni istruzione richiede k·Ts\nPer n istruzioni:\nTseq = <em>n · (k · Ts)</em>",
+    expl:"Senza pipeline ogni istruzione attraversa tutti i k stadi prima della successiva, impiegando k·Ts; per n istruzioni il totale è <b>n·k·Ts</b>.",
+    trap:"⚑ Il tranello: (k + n − 1)·Ts è la formula del tempo in <b>pipeline</b> (Tpipe), non di quella sequenziale."
+  },
+  {
+    topic:"Prestazioni",
+    t:"calcul",
+    q:"Qual è il tempo di esecuzione di n istruzioni in una pipeline a k stadi (Tpipe), tenendo conto del riempimento?",
+    opts:["Tpipe = n·k·Ts","Tpipe = [k + (n − 1)]·Ts","Tpipe = (k − 1 + n)·k·Ts","Tpipe = k·Ts / n"],
+    correct:1,
+    formula:"La 1ª istruzione: k·Ts (riempimento)\nle (n−1) successive: 1·Ts ciascuna\nTpipe = <em>[k + (n − 1)] · Ts</em>",
+    expl:"La prima istruzione riempie la pipeline in k·Ts; poi <b>ogni Ts</b> ne esce una nuova, quindi le restanti (n−1) costano 1·Ts ciascuna.",
+    trap:"⚑ Il tranello: n·k·Ts è il tempo sequenziale: ignora completamente la sovrapposizione tipica della pipeline."
+  },
+  {
+    topic:"Prestazioni",
+    t:"calcul",
+    q:"Qual è la formula dello speedup S della pipeline rispetto alla macchina sequenziale?",
+    opts:[
+      "S = [k + (n − 1)] / (n·k)",
+      "S = (n·k) / [k + (n − 1)]",
+      "S = n / k",
+      "S = k / n"
+    ],
+    correct:1,
+    formula:"S = Tseq / Tpipe\nS = (n·k·Ts) / ([k+(n−1)]·Ts)\nS = <em>n·k / [k + (n − 1)]</em>",
+    expl:"Lo speedup è il rapporto Tseq/Tpipe: semplificando Ts si ottiene <b>n·k / [k + (n − 1)]</b>.",
+    trap:"⚑ Il tranello: la prima opzione è il <b>reciproco</b> (Tpipe/Tseq): numeratore e denominatore sono invertiti."
+  },
+  {
+    topic:"Prestazioni",
+    t:"calcul",
+    q:"A quale valore tende lo speedup S quando il numero di istruzioni n diventa molto grande?",
+    opts:["Tende a n","Tende a k","Tende a 1","Tende a k·Ts"],
+    correct:1,
+    formula:"S = n·k / [k + (n − 1)]\nper n → ∞:\nS = n·k / n ≈ <em>k</em>",
+    expl:"Per n molto grande il termine (k−1) diventa trascurabile rispetto a n e lo speedup <b>tende a k</b>, il numero di stadi.",
+    trap:"⚑ Il tranello: per n piccolo lo speedup è ben inferiore a k a causa del riempimento iniziale: solo al limite tende a k."
+  },
+  {
+    topic:"Prestazioni",
+    t:"calcul",
+    q:"Pipeline a 5 stadi, ogni stadio 200 ns. A regime (n molto alto), ogni quanto tempo termina un'istruzione?",
+    opts:["Ogni 1000 ns","Ogni 200 ns","Ogni 40 ns","Ogni 5 ns"],
+    correct:1,
+    formula:"A regime esce 1 istruzione ogni Ts\nTs = 200 ns\n→ 1 istruzione ogni <em>200 ns</em>",
+    expl:"Una volta riempita la pipeline, ogni tempo di stadio Ts (200 ns) termina una nuova istruzione, da cui uno speedup pari a k=5.",
+    trap:"⚑ Il tranello: 1000 ns (= 5×200) è il tempo di attraversamento completo di una <b>singola</b> istruzione, non il ritmo a regime."
+  },
+  {
+    topic:"Prestazioni",
+    t:"calcul",
+    q:"Pipeline a 5 stadi con stadi da 200 ns: qual è la latenza di attraversamento di una singola istruzione?",
+    opts:["200 ns","400 ns","1000 ns","100 ns"],
+    correct:2,
+    formula:"Latenza singola = k · Ts\n= 5 · 200 ns\n= <em>1000 ns</em>",
+    expl:"Ogni istruzione, per completarsi, attraversa tutti e 5 gli stadi: 5 × 200 ns = <b>1000 ns</b>.",
+    trap:"⚑ Il tranello: 200 ns è il ritmo a regime (throughput), non la latenza di una singola istruzione che invece è k·Ts."
+  },
+  {
+    topic:"Prestazioni",
+    t:"calcul",
+    q:"Speedup reale con stalli: se una pipeline a 5 stadi ha in media 0,25 stalli per istruzione, quanto vale S reale?",
+    opts:["S = 5","S = 4","S = 6,25","S = 1,25"],
+    correct:1,
+    formula:"S = k / (1 + stall/istr)\nS = 5 / (1 + 0,25)\nS = 5 / 1,25 = <em>4</em>",
+    expl:"Lo speedup reale è k diviso (1 + stalli per istruzione): 5 / 1,25 = <b>4</b>. Gli stalli (bolle) riducono il guadagno teorico.",
+    trap:"⚑ Il tranello: 6,25 si ottiene <b>moltiplicando</b> 5 × 1,25 anziché dividere: gli stalli peggiorano, non migliorano, lo speedup."
+  },
+  // --- Prestazioni concettuali ---
+  {
+    topic:"Prestazioni",
+    q:"Come influisce il pipelining su throughput e latenza della singola istruzione?",
+    opts:[
+      "Aumenta sia throughput sia latenza della singola istruzione",
+      "Aumenta il throughput ma spesso aumenta (peggiora) la latenza della singola istruzione",
+      "Diminuisce throughput e latenza",
+      "Lascia invariato il throughput e riduce la latenza"
+    ],
+    correct:1,
+    expl:"Il pipelining <b>aumenta il throughput</b> (es. MIPS) ma la latenza della singola istruzione spesso aumenta per i registri intermedi di sincronizzazione.",
+    trap:"⚑ Il tranello: è intuitivo pensare che 'più veloce' significhi minore latenza, ma il guadagno è sul throughput, non sul tempo della singola istruzione."
+  },
+  {
+    topic:"Prestazioni",
+    q:"Quando si parla di architettura SUPER-PIPELINE?",
+    opts:[
+      "Quando ci sono esattamente 5 stadi",
+      "Quando il numero di stadi è molto alto (es. 11 nel Pentium II, 20 nel Pentium IV)",
+      "Quando si usano due ALU in parallelo",
+      "Quando la pipeline non ha mai stalli"
+    ],
+    correct:1,
+    expl:"Si parla di <b>super-pipeline</b> quando il numero di stadi è molto alto (11 nel Pentium II, 20 nel Pentium IV), spesso sfruttando sia fronte di salita sia di discesa del clock.",
+    trap:"⚑ Il tranello: usare due ALU in parallelo è piuttosto un'architettura superscalare, concetto distinto dalla profondità della pipeline."
+  },
+  {
+    topic:"Prestazioni",
+    q:"Cos'è una 'bolla' (bubble) nella pipeline?",
+    opts:[
+      "Un'istruzione aggiuntiva inserita per aumentare il throughput",
+      "Un tempo di stallo inserito quando la pipeline si blocca, deve attendere o svuotarsi",
+      "Un registro di pipeline difettoso",
+      "La fase di riempimento iniziale della pipeline"
+    ],
+    correct:1,
+    expl:"La <b>bolla</b> è uno stallo: si inserisce quando la pipeline deve attendere (es. risultato in memoria) o svuotarsi, e penalizza lo speedup complessivo.",
+    trap:"⚑ Il tranello: la fase iniziale che riempie la pipeline è il 'riempimento', concetto diverso dallo stallo introdotto a regime."
+  },
+  {
+    topic:"Prestazioni",
+    q:"Lo speedup reale di una pipeline dipende, secondo il testo, da quale legge?",
+    opts:[
+      "Legge di Moore",
+      "Legge di Amdahl, ossia la frazione di tempo in cui la pipeline lavora a pieno ritmo",
+      "Legge di Little",
+      "Legge di Ohm"
+    ],
+    correct:1,
+    expl:"Lo speedup reale dipende dalla <b>legge di Amdahl</b>: conta la frazione di tempo in cui la pipeline può essere impiegata a pieno ritmo (senza stalli).",
+    trap:"⚑ Il tranello: la legge di Moore riguarda la crescita dei transistor nel tempo, non il limite di speedup di una porzione parallelizzabile."
+  }
+];
+
+/* ---------- render ---------- */
+const quizEl = document.getElementById('quiz');
+const filterEl = document.getElementById('filter');
+const toggleEl = document.getElementById('onlyCalc');
+const finalEl = document.getElementById('final');
+const LET = ['A','B','C','D'];
+let answered = 0, correctCount = 0, onlyCalc = false;
+
+// build filter options
+const topics = [...new Set(Q.map(q=>q.topic))];
+filterEl.innerHTML = '<option value="__all">Tutti gli argomenti</option>' +
+  topics.map(t=>`<option value="${t}">${t}</option>`).join('');
+
+Q.forEach((q,i)=>{
+  const card = document.createElement('article');
+  card.className = 'card';
+  card.dataset.topic = q.topic;
+  card.dataset.calc = q.t === 'calcul' ? '1' : '0';
+  card.dataset.idx = i;
+
+  const calcBadge = q.t === 'calcul' ? '<span class="badge calc">calcul</span>' : '';
+  card.innerHTML = `
+    <div class="qhead">
+      <div class="qnum">${i+1}</div>
+      <div>
+        <div class="badges"><span class="badge">${q.topic}</span>${calcBadge}</div>
+      </div>
+    </div>
+    <div class="qtext">${q.q}</div>
+    <ul class="opts">
+      ${q.opts.map((o,j)=>`
+        <li class="opt" data-j="${j}">
+          <span class="letter">${LET[j]}</span>
+          <span class="txt">${o}</span>
+        </li>`).join('')}
+    </ul>
+    <div class="reveal">
+      ${q.formula ? `<div class="formula">${q.formula}</div>` : ''}
+      <p class="expl">${q.expl}</p>
+      ${q.trap ? `<div class="trap"><b>⚑ Il tranello:</b> ${q.trap.replace(/^⚑ Il tranello:\s*/,'')}</div>` : ''}
+    </div>`;
+
+  const optsWrap = card.querySelector('.opts');
+  card.querySelectorAll('.opt').forEach(opt=>{
+    opt.addEventListener('click',()=>{
+      if(card.classList.contains('locked')) return;
+      const j = +opt.dataset.j;
+      card.classList.add('locked');
+      optsWrap.classList.add('locked');
+      const correct = card.querySelector(`.opt[data-j="${q.correct}"]`);
+      correct.classList.add('correct');
+      correct.insertAdjacentHTML('beforeend','<span class="mark">✓ giusta</span>');
+      if(j === q.correct){
+        card.classList.add('ok');
+        correctCount++;
+      } else {
+        opt.classList.add('wrong');
+        opt.insertAdjacentHTML('beforeend','<span class="mark">✗ la tua</span>');
+        card.classList.add('no');
+      }
+      answered++;
+      updateHud();
+    });
+  });
+
+  quizEl.appendChild(card);
+});
+
+function visibleCards(){
+  return [...quizEl.querySelectorAll('.card')].filter(c=>c.style.display !== 'none');
+}
+
+function updateHud(){
+  const total = Q.length;
+  document.getElementById('score').textContent =
+    `Punteggio ${correctCount}/${total} · ${answered} risposte`;
+  document.getElementById('prog').style.width = (answered/total*100)+'%';
+  if(answered === total) showFinal();
+}
+
+function applyFilters(){
+  const val = filterEl.value;
+  quizEl.querySelectorAll('.card').forEach(c=>{
+    const topicOk = (val === '__all') || (c.dataset.topic === val);
+    const calcOk = !onlyCalc || c.dataset.calc === '1';
+    c.style.display = (topicOk && calcOk) ? '' : 'none';
+  });
+}
+filterEl.addEventListener('change',applyFilters);
+toggleEl.addEventListener('click',()=>{
+  onlyCalc = !onlyCalc;
+  toggleEl.classList.toggle('on',onlyCalc);
+  toggleEl.setAttribute('aria-pressed',onlyCalc);
+  toggleEl.textContent = onlyCalc ? 'Tutte le domande' : 'Solo calcoli';
+  applyFilters();
+});
+
+function showFinal(){
+  const total = Q.length;
+  const pct = correctCount/total*100;
+  document.getElementById('finalScore').textContent = `${correctCount}/${total}`;
+  let msg, sub;
+  if(pct === 100){ msg='Perfetto'; sub='Padronanza completa di multiciclo e pipeline. Sei pronto per l\u2019esame.'; }
+  else if(pct >= 75){ msg='Ottimo'; sub='Conosci bene la materia: rivedi solo i pochi punti sbagliati.'; }
+  else if(pct >= 50){ msg='Discreto'; sub='Base solida ma con lacune: ripassa stadi, segnali di controllo e formule dello speedup.'; }
+  else { msg='Da riprendere'; sub='Conviene rileggere il capitolo dall\u2019unit\u00e0 di controllo fino alle prestazioni e rifare il quiz.'; }
+  document.getElementById('finalMsg').textContent = msg;
+  document.getElementById('finalSub').textContent = sub;
+  finalEl.classList.add('show');
+  finalEl.scrollIntoView({behavior:'smooth'});
+}
+
+updateHud();
+</script>
+</body>
+</html>

@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz · Reti Logiche Sequenziali</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Spectral:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c1a17; --paper:#f4efe6; --paper2:#ece4d6; --line:#cdbfa6;
+    --accent:#8a2b1f; --accent2:#1f5d4c; --gold:#b8860b;
+    --good:#1f5d4c; --bad:#a3302a; --muted:#6e655a;
+    --shadow:0 18px 40px -22px rgba(28,26,23,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Spectral',Georgia,serif;color:var(--ink);line-height:1.55;padding:0 0 80px;
+    background:
+      radial-gradient(circle at 20% -10%, rgba(184,134,11,.10), transparent 45%),
+      radial-gradient(circle at 100% 0%, rgba(31,93,76,.08), transparent 40%),
+      var(--paper);
+    background-attachment:fixed;
+  }
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(rgba(28,26,23,.035) 1px, transparent 1px);background-size:4px 4px;mix-blend-mode:multiply;}
+  .wrap{max-width:830px;margin:0 auto;padding:0 22px;position:relative;z-index:1}
+
+  header{padding:54px 0 24px;border-bottom:2px solid var(--ink);margin-bottom:24px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(2rem,6vw,3.3rem);line-height:.98;margin:.18em 0 .15em;letter-spacing:-.01em}
+  .sub{font-size:1.02rem;color:var(--muted);max-width:64ch}
+
+  .hud{position:sticky;top:0;z-index:20;background:linear-gradient(var(--paper),var(--paper) 72%, rgba(244,239,230,0));padding:12px 0 16px;margin-bottom:6px}
+  .hud-inner{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .bar{flex:1;min-width:140px;height:8px;border:1px solid var(--ink);border-radius:20px;overflow:hidden;background:rgba(255,255,255,.5)}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--gold));transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .score{font-family:'JetBrains Mono',monospace;font-size:.82rem;font-weight:700;white-space:nowrap}
+  .score b{color:var(--accent2)}
+  select,.filterbtn{font-family:'JetBrains Mono',monospace;font-size:.72rem;border:1px solid var(--ink);background:rgba(255,255,255,.6);padding:7px 10px;border-radius:8px;cursor:pointer;color:var(--ink)}
+  .filterbtn:hover{background:var(--ink);color:var(--paper)}
+
+  .card{background:linear-gradient(180deg,#fffdf8,#fbf6ec);border:1.5px solid var(--ink);border-radius:4px;box-shadow:var(--shadow);padding:24px 24px 22px;margin:22px 0;position:relative;scroll-margin-top:88px}
+  .card::before{content:"";position:absolute;left:-1.5px;top:18px;bottom:18px;width:5px;background:var(--accent);border-radius:4px 0 0 4px}
+  .card.done::before{background:var(--good)}
+  .card.failed::before{background:var(--bad)}
+  .qtop{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:4px}
+  .qnum{font-family:'Fraunces',serif;font-weight:900;font-size:1.5rem;color:var(--accent);line-height:1}
+  .qtopic{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--accent2);padding:4px 9px;border-radius:20px;white-space:nowrap;align-self:flex-start}
+  .qtopic[data-t="calcul"]{background:var(--gold)}
+  .qtext{font-size:1.1rem;font-weight:500;margin:6px 0 2px}
+  pre.code{font-family:'JetBrains Mono',monospace;font-size:.84rem;line-height:1.5;background:#211f1b;color:#f4efe6;border-radius:8px;padding:13px 15px;margin:11px 0;overflow-x:auto;border-left:4px solid var(--gold)}
+
+  .opts{list-style:none;margin:14px 0 0;display:flex;flex-direction:column;gap:9px}
+  .opt{display:flex;gap:12px;align-items:flex-start;border:1.4px solid var(--line);border-radius:10px;padding:11px 13px;cursor:pointer;background:rgba(255,255,255,.55);transition:transform .12s,border-color .15s,background .15s;font-size:.97rem}
+  .opt:hover{border-color:var(--ink);transform:translateX(3px)}
+  .opt .lt{font-family:'JetBrains Mono',monospace;font-weight:700;border:1.4px solid var(--ink);border-radius:6px;width:26px;height:26px;display:grid;place-items:center;flex:none;font-size:.82rem;transition:.15s}
+  .opt.correct{border-color:var(--good);background:rgba(31,93,76,.13)}
+  .opt.correct .lt{background:var(--good);color:#fff;border-color:var(--good)}
+  .opt.wrong{border-color:var(--bad);background:rgba(163,48,42,.10)}
+  .opt.wrong .lt{background:var(--bad);color:#fff;border-color:var(--bad)}
+  .opt.locked{cursor:default}.opt.locked:hover{transform:none}
+  .opt .mark{margin-left:auto;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.74rem;opacity:0;align-self:center;white-space:nowrap}
+  .opt.correct .mark{opacity:1;color:var(--good)}.opt.wrong .mark{opacity:1;color:var(--bad)}
+
+  .expl{margin-top:15px;border-top:1.5px dashed var(--line);padding-top:14px;font-size:.96rem;opacity:0;max-height:0;overflow:hidden;transition:opacity .4s,max-height .5s}
+  .expl.show{opacity:1;max-height:1800px}
+  .expl .verdict{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;display:inline-block;margin-bottom:8px;padding:3px 10px;border-radius:20px}
+  .expl .verdict.ok{background:rgba(31,93,76,.15);color:var(--good)}
+  .expl .verdict.no{background:rgba(163,48,42,.13);color:var(--bad)}
+  .expl p{margin:6px 0}.expl b{color:var(--accent)}
+  .formula{font-family:'JetBrains Mono',monospace;font-size:.85rem;line-height:1.6;background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent2);border-radius:8px;padding:11px 13px;margin:10px 0;overflow-x:auto;white-space:pre-wrap}
+  .formula em{color:var(--accent);font-style:normal;font-weight:700}
+  .trap{background:rgba(163,48,42,.08);border:1px solid var(--bad);border-radius:8px;padding:9px 12px;margin:10px 0;font-size:.9rem}
+  .trap::before{content:"⚑ Il tranello: ";font-weight:700;color:var(--bad);font-family:'JetBrains Mono',monospace;font-size:.78rem}
+
+  #final{display:none;text-align:center;padding:46px 28px;margin-top:26px}
+  #final.show{display:block;animation:fade .6s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  #final .big{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(3rem,14vw,6rem);line-height:1;color:var(--accent)}
+  #final .lbl{font-family:'JetBrains Mono',monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-size:.8rem}
+  #final .verdict-txt{font-size:1.25rem;font-family:'Fraunces',serif;margin:14px 0}
+  .btn{font-family:'JetBrains Mono',monospace;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);padding:13px 24px;border-radius:8px;cursor:pointer;margin-top:18px;transition:.2s}
+  .btn:hover{background:transparent;color:var(--ink)}
+  .hidden{display:none !important}
+  footer{text-align:center;margin-top:38px;font-size:.82rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Architettura dei Calcolatori · UNIMORE</div>
+    <h1>Reti Logiche<br>Sequenziali</h1>
+    <p class="sub">Quiz completo su tutto il Cap. 3-4: dai bistabili agli automi di Mealy/Moore, dalla metastabilità ai contatori. Ogni risposta sbagliata sembra giusta — clicca e leggi la spiegazione con formule e tranello.</p>
+  </header>
+
+  <div class="hud">
+    <div class="hud-inner">
+      <div class="bar"><i id="barfill"></i></div>
+      <span class="score">Punteggio <b id="scoreNow">0</b>/<span id="scoreTot">0</span> · <span id="answered">0</span> risposte</span>
+      <select id="topicSel"><option value="all">Tutti gli argomenti</option></select>
+      <button class="filterbtn" id="toggleCalc">Solo calcoli</button>
+    </div>
+  </div>
+
+  <main id="quiz"></main>
+
+  <section id="final">
+    <div class="lbl">Risultato</div>
+    <div class="big"><span id="finalScore">0</span><span style="font-size:.4em;color:var(--muted)">/<span id="finalTot">0</span></span></div>
+    <div class="verdict-txt" id="finalMsg"></div>
+    <button class="btn" onclick="location.reload()">Ricomincia</button>
+  </section>
+
+  <footer>In bocca al lupo per la laurea ✦</footer>
+</div>
+
+<script>
+const Q = [
+/* ===== BASI ===== */
+{topic:"Basi",q:"Una rete sequenziale si distingue da una combinatoria perché:",
+ opts:[
+  "L'uscita dipende solo dagli ingressi nell'istante attuale",
+  "L'uscita dipende dagli ingressi attuali E dalla storia passata (stato interno)",
+  "Non può avere più di due ingressi",
+  "Non utilizza porte logiche"],
+ correct:1,
+ formula:"combinatoria:  z = f(x₁…xₙ)\nsequenziale:   z(t) = f(x₁(t)…xₙ(t), <em>t</em>)",
+ expl:"La rete sequenziale conserva <b>memoria</b> degli eventi passati nel proprio stato interno: l'uscita dipende anche dalla storia degli ingressi.",
+ trap:"« solo gli ingressi attuali » è esattamente la definizione di rete combinatoria."},
+
+{topic:"Basi",q:"Nello schema di una rete sequenziale, lo stato presente (y) e lo stato futuro (Y):",
+ opts:[
+  "Sono sempre uguali",
+  "y è l'uscita Z e Y è l'ingresso X",
+  "La rete combinatoria calcola Y (stato futuro); l'elemento di memoria lo congela e lo ripresenta come y al ciclo successivo",
+  "Lo stato futuro precede temporalmente quello presente"],
+ correct:2,
+ expl:"La rete combinatoria produce lo <b>stato futuro Y</b>; l'elemento di memoria lo memorizza e lo restituisce come <b>stato presente y</b> nell'intervallo di lavoro successivo.",
+ trap:"y e Y non sono né l'ingresso né l'uscita: sono le variabili di stato, distinte da X e Z."},
+
+{topic:"Basi",q:"Una rete sequenziale si dice ASINCRONA se:",
+ opts:[
+  "Le variazioni degli ingressi modificano stato e uscite in qualsiasi istante",
+  "Le variazioni vengono recepite solo sul fronte del clock",
+  "Non ha elementi di memoria",
+  "Ha sempre due soli stati"],
+ correct:0,
+ expl:"Asincrona = reagisce <b>immediatamente</b> ai cambiamenti, senza attendere un evento di sincronizzazione.",
+ trap:"« solo sul fronte del clock » descrive una rete SINCRONA."},
+
+/* ===== CLOCK ===== */
+{topic:"Clock",t:"calcul",q:"Una rete ha frequenza di clock di 100 MHz. Quanto vale il periodo di clock Tck?",
+ opts:["100 ns","10 ns","1 ns","0,1 ns"],
+ correct:1,
+ formula:"Tck = 1 / fck = 1 / (100·10⁶ Hz) = 10⁻⁸ s = <em>10 ns</em>",
+ expl:"Il periodo è il reciproco della frequenza.",
+ trap:"100 ns deriva da un errore di fattore 10 (come se fosse 10 MHz)."},
+
+{topic:"Clock",q:"Il « fronte di salita » del clock è:",
+ opts:[
+  "La transizione del segnale da 1 a 0",
+  "Il periodo in cui il clock resta a 1",
+  "La transizione del segnale da 0 a 1",
+  "Il reciproco della frequenza"],
+ correct:2,
+ expl:"Fronte di salita = transizione 0→1. I flip-flop edge-triggered campionano su uno dei due fronti.",
+ trap:"La transizione 1→0 è il fronte di DISCESA."},
+
+/* ===== TEMPO DI PROPAGAZIONE ===== */
+{topic:"Propagazione",q:"Il tempo di propagazione di un gate è:",
+ opts:[
+  "Il tempo impiegato dal gate per propagare in uscita il cambiamento di un ingresso",
+  "Il tempo per cui l'ingresso deve restare stabile prima del clock",
+  "Il periodo del clock",
+  "Il tempo di refresh della memoria dinamica"],
+ correct:0,
+ expl:"È il ritardo con cui un gate « risponde » a un cambiamento d'ingresso. Si dà spesso come intervallo (Tmin, Tmax).",
+ trap:"« ingresso stabile prima del clock » è il tempo di SETUP, non la propagazione."},
+
+{topic:"Propagazione",t:"calcul",q:"Tecnologia: AND (Tmin 2ns, Tmax 7ns), NOT (Tmin 1ns, Tmax 5ns). La rete calcola S = A · B' (un NOT su B, poi un AND con A). Qual è il ritardo di propagazione MASSIMO?",
+ opts:["7 ns","3 ns","9 ns","12 ns"],
+ correct:3,
+ formula:"Cammino critico = il più lungo:\nB → NOT → AND  ⇒  Tmax = 5 + 7 = <em>12 ns</em>\n(il cammino di A passa solo per l'AND: 7 ns)",
+ expl:"Il ritardo totale è quello del <b>cammino critico</b> (il più lento). B deve attraversare prima il NOT (max 5ns) e poi l'AND (max 7ns).",
+ trap:"7 ns considera solo l'AND, ignorando che B passa prima dal NOT — proprio questo sfasamento può generare un'alea."},
+
+/* ===== ALEE ===== */
+{topic:"Alee",q:"Un « glitch » è:",
+ opts:[
+  "Un guasto permanente di un gate",
+  "Un impulso indesiderato dell'uscita durante la fase transitoria",
+  "Il valore corretto dell'uscita a regime",
+  "Un tipo di flip-flop"],
+ correct:1,
+ expl:"Glitch = impulso spurio che compare nel <b>transitorio</b>, prima che l'uscita si assesti al valore di regime.",
+ trap:"Non è un guasto: a regime l'uscita è corretta, il glitch è solo transitorio."},
+
+{topic:"Alee",q:"Una rete combinatoria è caratterizzata da un'ALEA (hazard) quando:",
+ opts:[
+  "Può potenzialmente presentare un glitch: in transitorio l'uscita può differire dal valore a regime",
+  "L'uscita a regime è sempre sbagliata",
+  "Non possiede condizioni di indifferenza",
+  "Ha più di un'uscita"],
+ correct:0,
+ expl:"L'alea è la <b>possibilità</b> di un glitch, dovuta a cammini con ritardi diversi verso la stessa uscita.",
+ trap:"L'alea riguarda il transitorio: a regime l'uscita resta corretta."},
+
+{topic:"Alee",q:"Un'ALEA STATICA si verifica quando, dopo un cambiamento degli ingressi:",
+ opts:[
+  "L'uscita cambia più volte prima di assestarsi al valore finale",
+  "L'uscita resta indefinita per sempre",
+  "L'uscita ha un cambiamento (glitch) nel transitorio mentre avrebbe dovuto restare costante",
+  "Lo stato interno non cambia mai"],
+ correct:2,
+ expl:"Statica: l'uscita <b>doveva restare costante</b> ma « sbatte » per un istante.",
+ trap:"« cambia più volte prima di assestarsi » descrive l'alea DINAMICA."},
+
+{topic:"Alee",q:"Quale tipo di sintesi evita il problema delle alee dinamiche?",
+ opts:[
+  "L'uso esclusivo di flip-flop",
+  "Le forme canoniche SP e PS",
+  "Aumentare la frequenza di clock",
+  "La codifica di Gray degli stati"],
+ correct:1,
+ expl:"Le reti realizzate in <b>forma canonica SP o PS</b> (due livelli) evitano le alee dinamiche; il Tck va comunque calcolato sui transitori."},
+
+/* ===== BISTABILI / SR ===== */
+{topic:"Bistabili",q:"Un elemento bistabile è capace di:",
+ opts:[
+  "Mantenere al suo interno il valore 0 o 1, cioè 1 bit di memoria",
+  "Memorizzare una parola di n bit",
+  "Eseguire la somma di due numeri",
+  "Generare il segnale di clock"],
+ correct:0,
+ expl:"Il bistabile è l'elemento elementare delle reti sequenziali: conserva <b>1 bit</b>. Mettendone insieme n si ottiene un registro.",
+ trap:"Memorizzare n bit è compito del REGISTRO (n bistabili)."},
+
+{topic:"Bistabili",q:"Nel bistabile SET-RESET asincrono, la combinazione S=1, R=1 è:",
+ opts:[
+  "La condizione di hold (mantenimento)",
+  "Una configurazione proibita (vietata)",
+  "Quella che pone Q=1 in modo stabile",
+  "Quella che pone Q=0 in modo stabile"],
+ correct:1,
+ formula:"S R | Q\n0 0 | Q (hold)\n0 1 | 0  (reset)\n1 0 | 1  (set)\n1 1 | <em>vietata</em>",
+ expl:"Con S=R=1 entrambe le uscite andrebbero a 0 (incoerenti con Q = NOT Q#): configurazione proibita.",
+ trap:"L'hold è S=R=0, non S=R=1."},
+
+{topic:"Bistabili",q:"Nel bistabile SR, la condizione S=0, R=0 produce:",
+ opts:[
+  "Q=1",
+  "Q=0",
+  "Il mantenimento dello stato precedente (Q non cambia)",
+  "Una configurazione proibita"],
+ correct:2,
+ expl:"S=R=0 → <b>hold</b>: l'uscita conserva il valore memorizzato (è proprio questa la « memoria » del bistabile)."},
+
+{topic:"Bistabili",t:"calcul",q:"La funzione di eccitazione del bistabile SR è:",
+ opts:[
+  "Q(t+1) = R + S'·Q(t)",
+  "Q(t+1) = S + R'·Q(t)",
+  "Q(t+1) = S·R + Q(t)",
+  "Q(t+1) = S' + R·Q(t)"],
+ correct:1,
+ formula:"Q(t+1) = <em>S + R'·Q(t)</em>\nS=1 → Q=1 ; R=1,S=0 → Q=0 ; S=R=0 → Q(t+1)=Q(t)",
+ expl:"Set forza Q=1; Reset (tramite R') azzera; con entrambi a 0 si mantiene lo stato.",
+ trap:"Scambiare S↔R darebbe un comportamento « reset-dominante » diverso e scorretto."},
+
+{topic:"Bistabili",q:"Nella sintesi a NOR del bistabile SR:",
+ opts:[
+  "Si usano due NOR incrociati (cross-coupled); appena si asserisce Reset, Q va a 0",
+  "Si usano due AND incrociati",
+  "Non serve alcuna retroazione",
+  "L'uscita dipende dal clock"],
+ correct:0,
+ expl:"L'SR asincrono si realizza con <b>due NOR retroazionati</b> (o due NAND, con ingressi S#, R#)."},
+
+/* ===== LATCH / FF ===== */
+{topic:"Latch/FF",q:"Un LATCH SR con clock (sensibile al livello) si comporta così:",
+ opts:[
+  "Quando il clock è 0 mantiene lo stato; quando il clock è 1 si comporta da SR",
+  "Cambia stato solo sull'istante del fronte del clock",
+  "Ignora sempre il clock",
+  "Non possiede mai trasparenza"],
+ correct:0,
+ expl:"Il latch è sensibile al <b>livello</b>: con C=0 è in hold, con C=1 diventa « trasparente » e si comporta da SR.",
+ trap:"« solo sul fronte » è il comportamento del FLIP-FLOP, non del latch."},
+
+{topic:"Latch/FF",q:"Un D-Latch:",
+ opts:[
+  "Campiona D solo sul fronte di discesa",
+  "Mantiene l'uscita quando l'enable non è attivo e campiona D quando l'enable è attivo",
+  "Ha una configurazione proibita come l'SR",
+  "Ha due ingressi dato S e R"],
+ correct:1,
+ expl:"Il D-latch deriva dall'SR collegando D a S e D' a R: <b>elimina la configurazione proibita</b> ed è trasparente quando il clock è attivo.",
+ trap:"« solo sul fronte di discesa » descrive il FLIP-FLOP D."},
+
+{topic:"Latch/FF",q:"La differenza fondamentale tra LATCH e FLIP-FLOP è:",
+ opts:[
+  "Il latch commuta sul fronte, il FF sul livello",
+  "Il latch memorizza n bit, il FF solo 1",
+  "Il latch è trasparente (sensibile al livello), il FF non è trasparente (commuta sul fronte)",
+  "Il FF non ha bisogno del clock"],
+ correct:2,
+ expl:"Latch = sensibile al <b>livello</b> → trasparente. Flip-flop = sensibile al <b>fronte</b> → non trasparente.",
+ trap:"L'opzione 1 inverte esattamente le due definizioni."},
+
+{topic:"Latch/FF",q:"In un latch trasparente, durante il periodo in cui il clock è alto:",
+ opts:[
+  "Si hanno tante transizioni di stato quanti sono i cambiamenti degli ingressi",
+  "Avviene una sola transizione, sul fronte",
+  "Lo stato resta sempre congelato",
+  "L'uscita diventa indefinita"],
+ correct:0,
+ expl:"È il punto debole del latch: finché l'enable è attivo, ogni variazione dell'ingresso passa in uscita (trasparenza).",
+ trap:"« una sola transizione sul fronte » è il comportamento del flip-flop, non del latch."},
+
+{topic:"Latch/FF",q:"Un flip-flop D edge-triggered:",
+ opts:[
+  "Campiona D nell'istante del fronte del clock ed è più costoso di un latch (es. composto da 3 latch)",
+  "È trasparente per tutto il periodo alto del clock",
+  "È sempre asincrono",
+  "Non può avere ingressi di preset/clear"],
+ correct:0,
+ expl:"Commuta solo sul <b>fronte</b>; per ottenere la non-trasparenza serve più hardware (master-slave / 3 latch)."},
+
+{topic:"Latch/FF",q:"Gli ingressi di PRESET e CLEAR di un flip-flop sono:",
+ opts:[
+  "Ingressi di controllo asincroni che forzano l'uscita a 1 (preset) o 0 (clear) indipendentemente dal clock",
+  "Ingressi sincroni campionati sul fronte",
+  "Ingressi dato come D",
+  "Le uscite complementate Q#"],
+ correct:0,
+ expl:"Preset/Clear agiscono <b>subito</b> (asincroni), scavalcando il clock — utili per l'inizializzazione."},
+
+{topic:"Latch/FF",q:"Una configurazione MASTER-SLAVE serve a:",
+ opts:[
+  "Memorizzare due bit indipendenti",
+  "Ottenere un comportamento edge-triggered: il master campiona su un livello, lo slave aggiorna l'uscita sull'altro",
+  "Eliminare del tutto il clock",
+  "Raddoppiare la frequenza di clock"],
+ correct:1,
+ expl:"Due latch in cascata con clock opposti → l'uscita cambia di fatto solo al passaggio del fronte (non-trasparenza)."},
+
+/* ===== TIMING / METASTABILITÀ ===== */
+{topic:"Timing",q:"Il tempo di SETUP è:",
+ opts:[
+  "Il tempo per cui l'ingresso deve restare stabile PRIMA del fronte del clock",
+  "Il tempo per cui l'ingresso deve restare stabile DOPO il fronte",
+  "Il ritardo tra fronte di clock e uscita valida",
+  "Il periodo del clock"],
+ correct:0,
+ expl:"Setup = stabilità richiesta <b>prima</b> del fronte attivo, perché il dato venga campionato correttamente.",
+ trap:"« DOPO il fronte » è il tempo di HOLD; « ritardo fronte→uscita » è il Tpro (propagazione). Tre concetti spesso confusi."},
+
+{topic:"Timing",q:"Il tempo di HOLD è:",
+ opts:[
+  "Il tempo prima del fronte in cui l'ingresso deve essere stabile",
+  "Il tempo per cui l'ingresso deve restare stabile DOPO il fronte del clock",
+  "Il tempo di propagazione del gate",
+  "Il duty cycle del clock"],
+ correct:1,
+ expl:"Hold = stabilità richiesta <b>dopo</b> il fronte. Insieme al setup definisce la « finestra » attorno al fronte in cui il dato non deve cambiare."},
+
+{topic:"Timing",q:"La metastabilità è:",
+ opts:[
+  "Un guasto permanente del flip-flop",
+  "La configurazione proibita dell'SR",
+  "L'effetto per cui, violando setup/hold, l'uscita resta indefinitamente in uno stato instabile tra 0 e 1",
+  "Un tipo di alea statica"],
+ correct:2,
+ expl:"Se un ingresso asincrono viola setup/hold, l'uscita può « restare appesa » tra 0 e 1: alcuni gate la leggono 1, altri 0.",
+ trap:"Non è un guasto né un'alea combinatoria: è un fenomeno legato alla sincronizzazione."},
+
+{topic:"Timing",t:"calcul",q:"La condizione per realizzare correttamente reti sincrone in cascata (no clock skew) è:",
+ opts:[
+  "Tck + Tsetup ≥ Tcomb − Thold",
+  "Tck − Tsetup ≥ Tcomb + Thold",
+  "Tck ≥ Tsetup · Thold",
+  "Tcomb ≥ Tck + Tsetup"],
+ correct:1,
+ formula:"Tck − Tsetup ≥ Tcomb + Thold\n(Tcomb = ritardo max della rete combinatoria tra due FF)",
+ expl:"Il periodo deve bastare a: attraversare la combinatoria, rispettare l'hold dopo il fronte e lasciare il setup prima del fronte successivo."},
+
+{topic:"Timing",q:"Per eliminare la metastabilità su un ingresso asincrono si può:",
+ opts:[
+  "Sincronizzare l'ingresso con una cascata di due reti sequenziali sensibili ai fronti (o allungare il ciclo di clock)",
+  "Eliminare il clock",
+  "Inserire una porta XOR",
+  "Aumentare il numero di stati"],
+ correct:0,
+ expl:"Il doppio sincronizzatore (due FF in cascata) dà tempo all'eventuale stato metastabile di risolversi; anche allungare Tck aiuta."},
+
+/* ===== REGISTRI ===== */
+{topic:"Registri",q:"Un registro a n bit si ottiene:",
+ opts:[
+  "Mettendo insieme n flip-flop (o latch) che condividono lo stesso clock",
+  "Mettendo in cascata n ALU",
+  "Con un singolo bistabile SR",
+  "Con un decoder n-to-2ⁿ"],
+ correct:0,
+ expl:"Registro = n bistabili in parallelo con clock comune → memorizza una parola di n bit."},
+
+{topic:"Registri",q:"In un registro con segnali WE# e OE#:",
+ opts:[
+  "WE# abilita la scrittura, OE# abilita l'uscita (tri-state) sul bus",
+  "WE# è il clock e OE# è il reset",
+  "Sono entrambi ingressi dato",
+  "Servono a generare il carry"],
+ correct:0,
+ expl:"WE# = write enable, OE# = output enable (tipicamente attivi bassi). OE# pilota i buffer tri-state verso il bus."},
+
+{topic:"Registri",q:"Un REGISTER FILE è:",
+ opts:[
+  "Un insieme di registri indirizzabili, con porte di lettura e scrittura",
+  "Un singolo flip-flop",
+  "Una memoria di massa",
+  "Una rete puramente combinatoria"],
+ correct:0,
+ expl:"È un banco di registri: tipicamente due letture (Read data 1/2) e una scrittura, indirizzate da numeri di registro."},
+
+{topic:"Registri",q:"Nel register file, la selezione del registro in SCRITTURA avviene tramite:",
+ opts:[
+  "Un multiplexer sulle uscite",
+  "Un decoder n-to-2ⁿ pilotato dal numero di registro, messo in AND con il segnale Write",
+  "Il segnale di clock collegato direttamente",
+  "Una porta XOR"],
+ correct:1,
+ expl:"Scrittura → <b>decoder</b> (sceglie quale registro abilitare). Lettura → <b>MUX</b> (seleziona quale registro mandare in uscita).",
+ trap:"Il multiplexer serve in LETTURA (Read data), non per la scrittura."},
+
+/* ===== AUTOMI ===== */
+{topic:"Automi",q:"Una macchina a stati finiti (FSM) è definita dalla tupla:",
+ opts:[
+  "Ms = {X, Z, S, F, G} — ingressi, uscite, stati, funzione di uscita, funzione di stato",
+  "Ms = {X, Z} soltanto",
+  "Ms = {clock, reset}",
+  "Ms = {AND, OR, NOT}"],
+ correct:0,
+ expl:"X = simboli d'ingresso, Z = uscita, S = stati interni, F = funzione di uscita, G = funzione di stato prossimo."},
+
+{topic:"Automi",t:"calcul",q:"La funzione di stato prossimo G di una FSM ha dominio e codominio:",
+ opts:[
+  "G: S → Z",
+  "G: S × X → S",
+  "G: X → Z",
+  "G: S × X → Z"],
+ correct:1,
+ formula:"G: S × X → <em>S</em>   (stato prossimo)\nF: S × X → Z   (uscita, Mealy)",
+ expl:"G prende stato presente + ingresso e restituisce lo <b>stato futuro</b>.",
+ trap:"S × X → Z è la funzione di USCITA F (Mealy), non la G."},
+
+{topic:"Automi",q:"In un automa di MEALY:",
+ opts:[
+  "L'uscita dipende dallo stato presente E dagli ingressi (F: S × X → Z)",
+  "L'uscita dipende solo dallo stato presente (F: S → Z)",
+  "Non esistono stati interni",
+  "L'uscita dipende solo dagli ingressi"],
+ correct:0,
+ expl:"Mealy: le uscite si scrivono sugli <b>archi</b> e dipendono da stato + ingresso → reazione immediata.",
+ trap:"« solo dallo stato » è l'automa di MOORE."},
+
+{topic:"Automi",q:"In un automa di MOORE:",
+ opts:[
+  "L'uscita dipende da stato e ingressi",
+  "L'uscita dipende solo dallo stato presente (F: S → Z); le uscite si associano ai nodi",
+  "Non serve l'elemento di memoria",
+  "Le uscite si associano agli archi"],
+ correct:1,
+ expl:"Moore: uscite nei <b>nodi</b>, funzione del solo stato → uscite più stabili (cambiano solo al cambio di stato).",
+ trap:"Uscite sugli archi + dipendenza dagli ingressi = Mealy."},
+
+{topic:"Automi",q:"Confrontando Mealy e Moore (a parità di funzione):",
+ opts:[
+  "Moore ha sempre meno stati di Mealy",
+  "Mealy non può essere sincrono",
+  "Sono funzionalmente equivalenti; Mealy reagisce prima e tende ad avere ≤ stati, Moore ha uscite più stabili",
+  "Moore reagisce sempre più velocemente"],
+ correct:2,
+ expl:"Equivalenti funzionalmente. Mealy: meno stati ma rete d'uscita più complessa e reattiva. Moore: più stati ma uscita semplice e « pulita ».",
+ trap:"Di solito è MEALY ad avere meno stati, non Moore."},
+
+{topic:"Automi",q:"Nel diagramma degli stati, i valori delle uscite si scrivono:",
+ opts:[
+  "Sempre nei nodi",
+  "Sempre sugli archi",
+  "Sugli archi se l'automa è di Mealy, nei nodi se è di Moore",
+  "Non si rappresentano mai"],
+ correct:2,
+ expl:"Regola pratica: Mealy → uscite sugli <b>archi</b> (ingresso/uscita); Moore → uscite nei <b>nodi</b>."},
+
+{topic:"Automi",q:"Due stati di una FSM si dicono EQUIVALENTI quando:",
+ opts:[
+  "Hanno le stesse transizioni (verso stati uguali o equivalenti) e le stesse uscite a parità di ingressi",
+  "Hanno lo stesso nome",
+  "Hanno la stessa codifica binaria",
+  "Sono entrambi lo stato iniziale"],
+ correct:0,
+ expl:"Stati equivalenti = indistinguibili dall'esterno → si possono fondere nella <b>minimizzazione</b> (meno stati, meno flip-flop)."},
+
+{topic:"Automi",q:"La CPU può essere descritta come una FSM perché:",
+ opts:[
+  "La sua Control Unit attraversa stati interni (fetch, decode, execute) in base a ingressi e stato",
+  "È una rete puramente combinatoria",
+  "Non possiede memoria di stato",
+  "Non utilizza un clock"],
+ correct:0,
+ expl:"La control unit è una FSM (complessa): cambia stato interno secondo le istruzioni/dati e i flag, pilotando il data path."},
+
+/* ===== SINTESI ===== */
+{topic:"Sintesi",q:"Nella sintesi di una rete sequenziale, la « tabella di flusso »:",
+ opts:[
+  "Ha tante colonne quante le configurazioni d'ingresso, tante righe quanti gli stati presenti, e contiene stati futuri e uscite",
+  "Contiene solo le uscite",
+  "Ha una sola colonna",
+  "È l'elenco dei gate elementari usati"],
+ correct:0,
+ expl:"La tabella di flusso mappa 1-a-1 il diagramma degli stati: per ogni (stato presente, ingresso) dà (stato futuro, uscita)."},
+
+{topic:"Sintesi",q:"Qual è l'ordine corretto dei passi nella sintesi di una FSM?",
+ opts:[
+  "Implementazione → codifica → diagramma → descrizione",
+  "Descrizione → diagramma degli stati → tabella di flusso → minimizzazione → tabelle transizioni/uscite (codifica) → implementazione",
+  "Diagramma → implementazione → descrizione",
+  "Tabella delle uscite → clock → descrizione"],
+ correct:1,
+ expl:"Si parte dalla specifica a parole, si disegna il diagramma, si compila la tabella di flusso, si minimizzano gli stati, si codifica e infine si sintetizza."},
+
+{topic:"Sintesi",q:"La « codifica degli stati » consiste nel:",
+ opts:[
+  "Mettere in corrispondenza ogni stato con una configurazione di variabili di stato binarie (es. S0→00, S1→01)",
+  "Eliminare gli stati equivalenti",
+  "Scegliere la frequenza di clock",
+  "Disegnare il diagramma degli stati"],
+ correct:0,
+ expl:"Si assegnano i bit di stato agli stati simbolici. La codifica binaria non è sempre l'ottima (esistono codifiche migliori, es. one-hot o Gray)."},
+
+{topic:"Sintesi",t:"calcul",q:"Per realizzare una FSM con 5 stati distinti, quante variabili di stato (flip-flop) servono al minimo, con codifica binaria?",
+ opts:["2","5","3","4"],
+ correct:2,
+ formula:"n_FF = ⌈log₂(num. stati)⌉ = ⌈log₂5⌉ = <em>3</em>\n(2² = 4 < 5 ≤ 8 = 2³)",
+ expl:"Con 3 bit si codificano fino a 8 stati: bastano per 5.",
+ trap:"5 FF è la codifica one-hot (non minima); 2 bit codificano solo 4 stati."},
+
+{topic:"Sintesi",q:"Nel metodo QMC in presenza di don't care, gli implicanti:",
+ opts:[
+  "Si cercano sull'on-set unito al don't-care set, ma la copertura va garantita solo per l'on-set",
+  "Devono coprire obbligatoriamente tutti i don't care",
+  "Non possono mai usare i don't care",
+  "Ignorano completamente l'on-set"],
+ correct:0,
+ expl:"I don't care servono ad <b>ingrandire</b> gli implicanti (sintesi più semplice); quelli coperti valgono 1, gli altri 0. Non è obbligatorio coprirli.",
+ trap:"Non bisogna coprirli per forza: si usano solo se convenienti."},
+
+/* ===== CONTATORI ===== */
+{topic:"Contatori",q:"Un contatore in avanti è:",
+ opts:[
+  "Una rete sequenziale sincrona che ad ogni colpo di clock incrementa il proprio valore",
+  "Una rete combinatoria che somma due numeri",
+  "Un registro privo di clock",
+  "Un multiplexer"],
+ correct:0,
+ expl:"Il contatore è una FSM ciclica: ad ogni fronte di clock passa allo stato successivo (incremento)."},
+
+{topic:"Contatori",t:"calcul",q:"Un contatore binario modulo 8 richiede:",
+ opts:["8 flip-flop","3 flip-flop","4 flip-flop","2 flip-flop"],
+ correct:1,
+ formula:"n = log₂(8) = <em>3</em>  → stati S0…S7",
+ expl:"3 bit codificano 8 stati distinti.",
+ trap:"8 FF sarebbe one-hot; 4 FF servirebbero per modulo 16."},
+
+{topic:"Contatori",q:"Un contatore BCD (modulo 10) realizzato con un contatore binario a 4 bit:",
+ opts:[
+  "Usa un comparatore (con '9') per generare un clear sincrono e riportare il conteggio a 0",
+  "Usa 10 flip-flop",
+  "Non necessita di alcun reset",
+  "Conta fino a 15 e poi si ferma"],
+ correct:0,
+ expl:"Il BCD conta 0→9: al raggiungimento del valore si genera un <b>clear sincrono</b> che riazzera il contatore."},
+
+{topic:"Contatori",q:"In un contatore con segnali Reset (R), Count Enable (CE) e Load:",
+ opts:[
+  "R azzera, CE abilita l'incremento (se 0 il contatore mantiene), Load carica un valore esterno D_in",
+  "CE è il clock e R è il dato",
+  "Load e CE sono lo stesso segnale",
+  "R incrementa il contatore"],
+ correct:0,
+ expl:"R = reset, CE = count enable (conta solo se attivo), Load = caricamento parallelo del valore D_in."},
+
+/* ===== ESEMPI ===== */
+{topic:"Esempi",t:"calcul",q:"Distributore di bibite (bibita 30 cent, monete da 10 e 20, niente resto): quanti stati servono per memorizzare l'importo?",
+ opts:["2","3","4","10"],
+ correct:2,
+ formula:"importi accumulabili: 0, 10, 20, 30 cent\n→ <em>4 stati</em> (S0, S1, S2, S3)",
+ expl:"Si memorizza l'importo ricevuto; al raggiungimento di 30 cent l'uscita Z=1 aziona l'erogazione.",
+ trap:"3 stati dimentica lo stato di erogazione (30 cent)."},
+
+{topic:"Esempi",q:"Un riconoscitore della sequenza « 101 » che NON lavora a sliding window:",
+ opts:[
+  "Pone Z=1 quando arriva l'ultimo '1' della sequenza, poi ricomincia il riconoscimento da capo",
+  "Pone Z=1 ad ogni bit ricevuto",
+  "Non usa stati interni",
+  "È una rete combinatoria"],
+ correct:0,
+ expl:"È una FSM riconoscitrice: dopo aver trovato 101, riparte (non riutilizza l'ultimo '1' come inizio della sequenza successiva)."},
+
+{topic:"Esempi",t:"calcul",q:"Sommatore seriale di due bit con due stati S0 (riporto=0) e S1 (riporto=1). Nello stato S0, con ingressi A e B, l'uscita somma Z vale:",
+ opts:[
+  "Z = A · B",
+  "Z = A ⊕ B (XOR), e si passa a S1 solo se A=B=1",
+  "Z = A + B",
+  "Z = 0 sempre"],
+ correct:1,
+ formula:"S0 (carry=0):  Z = A ⊕ B ;  → S1 se A·B = 1\nS1 (carry=1):  Z = (A ⊕ B)' ;  resta in S1 se A+B = 1",
+ expl:"È la logica del full-adder ripartita nel tempo: in S0 (nessun riporto) la somma è A⊕B; il riporto in uscita fa passare a S1.",
+ trap:"A·B è il carry, non la somma; A+B (OR) non è la somma aritmetica di due bit."}
+];
+
+/* ---------- Build ---------- */
+const quiz=document.getElementById('quiz');
+const L=['A','B','C','D'];
+let answered=0,score=0;
+document.getElementById('scoreTot').textContent=Q.length;
+document.getElementById('finalTot').textContent=Q.length;
+
+const topics=[...new Set(Q.map(q=>q.topic))];
+const sel=document.getElementById('topicSel');
+topics.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;sel.appendChild(o);});
+
+Q.forEach((item,i)=>{
+  const card=document.createElement('article');
+  card.className='card';
+  card.dataset.topic=item.topic;
+  card.dataset.calc=item.t==='calcul'?'1':'0';
+  const tClass=item.t==='calcul'?'calcul':'concept';
+  const codeHtml=item.code?`<pre class="code">${item.code}</pre>`:'';
+  const optsHtml=item.opts.map((o,j)=>`<li class="opt" data-i="${j}"><span class="lt">${L[j]}</span><span class="ot">${o}</span><span class="mark"></span></li>`).join('');
+  const fHtml=item.formula?`<div class="formula">${item.formula}</div>`:'';
+  const trapHtml=item.trap?`<div class="trap">${item.trap}</div>`:'';
+  card.innerHTML=`
+    <div class="qtop">
+      <span class="qnum">${String(i+1).padStart(2,'0')}</span>
+      <span class="qtopic" data-t="${tClass}">${item.topic}</span>
+    </div>
+    <p class="qtext">${item.q}</p>${codeHtml}
+    <ul class="opts">${optsHtml}</ul>
+    <div class="expl"><span class="verdict"></span>${fHtml}<p>${item.expl}</p>${trapHtml}</div>`;
+  const opts=card.querySelectorAll('.opt');
+  const expl=card.querySelector('.expl');
+  const verdict=card.querySelector('.verdict');
+  opts.forEach(opt=>{
+    opt.addEventListener('click',()=>{
+      if(card.dataset.done)return;
+      card.dataset.done='1';
+      const chosen=+opt.dataset.i, right=item.correct;
+      opts.forEach(o=>{
+        o.classList.add('locked');
+        const idx=+o.dataset.i;
+        if(idx===right){o.classList.add('correct');o.querySelector('.mark').textContent='✓ giusta';}
+        if(idx===chosen&&chosen!==right){o.classList.add('wrong');o.querySelector('.mark').textContent='✗ la tua';}
+      });
+      if(chosen===right){verdict.textContent='✓ Risposta corretta';verdict.className='verdict ok';card.classList.add('done');score++;}
+      else{verdict.textContent='✗ Sbagliata — risposta giusta: '+L[right];verdict.className='verdict no';card.classList.add('failed');}
+      expl.classList.add('show');answered++;updateHud();
+    });
+  });
+  quiz.appendChild(card);
+});
+
+function updateHud(){
+  document.getElementById('scoreNow').textContent=score;
+  document.getElementById('answered').textContent=answered;
+  document.getElementById('barfill').style.width=(answered/Q.length*100)+'%';
+  if(answered===Q.length)showFinal();
+}
+function showFinal(){
+  const f=document.getElementById('final');
+  document.getElementById('finalScore').textContent=score;
+  const pct=score/Q.length;
+  let m;
+  if(pct===1)m="Perfetto, anche i tranelli sono caduti. Sei pronto ✦";
+  else if(pct>=.85)m="Ottimo — ripassa solo i pochi tranelli mancati.";
+  else if(pct>=.7)m="Solido. Attenzione alle coppie vicine: latch/flip-flop, setup/hold, Mealy/Moore.";
+  else if(pct>=.5)m="Discreto ma fragile: rileggi ogni spiegazione, il tranello è descritto lì.";
+  else m="Da riprendere: le spiegazioni mostrano perché ogni risposta falsa sembrava vera.";
+  document.getElementById('finalMsg').textContent=m;
+  f.classList.add('show');f.scrollIntoView({behavior:'smooth'});
+}
+
+sel.addEventListener('change',()=>applyFilter());
+let calcOnly=false;
+document.getElementById('toggleCalc').addEventListener('click',e=>{
+  calcOnly=!calcOnly;
+  e.target.textContent=calcOnly?'Tutte le domande':'Solo calcoli';
+  applyFilter();
+});
+function applyFilter(){
+  const t=sel.value;
+  document.querySelectorAll('.card').forEach(c=>{
+    const okT=(t==='all'||c.dataset.topic===t);
+    const okC=(!calcOnly||c.dataset.calc==='1');
+    c.classList.toggle('hidden',!(okT&&okC));
+  });
+}
+</script>
+</body>
+</html>
