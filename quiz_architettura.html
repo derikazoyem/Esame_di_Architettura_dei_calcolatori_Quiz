@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz · Architettura dei Calcolatori</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Spectral:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c1a17;
+    --paper:#f4efe6;
+    --paper2:#ece4d6;
+    --line:#cdbfa6;
+    --accent:#8a2b1f;       /* rosso mattone */
+    --accent2:#1f5d4c;      /* verde lavagna */
+    --gold:#b8860b;
+    --good:#1f5d4c;
+    --bad:#a3302a;
+    --muted:#6e655a;
+    --shadow:0 18px 40px -22px rgba(28,26,23,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Spectral',Georgia,serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 20% -10%, rgba(184,134,11,.10), transparent 45%),
+      radial-gradient(circle at 100% 0%, rgba(31,93,76,.08), transparent 40%),
+      var(--paper);
+    background-attachment:fixed;
+    line-height:1.55;
+    padding:0 0 80px;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(rgba(28,26,23,.035) 1px, transparent 1px);
+    background-size:4px 4px;mix-blend-mode:multiply;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:0 22px;position:relative;z-index:1}
+
+  /* ---------- Header ---------- */
+  header{padding:54px 0 26px;border-bottom:2px solid var(--ink);margin-bottom:30px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(2.1rem,6vw,3.4rem);line-height:.98;margin:.18em 0 .15em;letter-spacing:-.01em}
+  .sub{font-size:1.02rem;color:var(--muted);max-width:60ch}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .tag{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.05em;padding:5px 11px;border:1px solid var(--line);border-radius:30px;background:rgba(255,255,255,.4);color:var(--muted)}
+
+  /* ---------- Progress ---------- */
+  .hud{position:sticky;top:0;z-index:20;background:linear-gradient(var(--paper),var(--paper) 70%, rgba(244,239,230,0));padding:12px 0 16px;margin-bottom:8px}
+  .hud-inner{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .bar{flex:1;min-width:160px;height:8px;border:1px solid var(--ink);border-radius:20px;overflow:hidden;background:rgba(255,255,255,.5)}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--gold));transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .score{font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:700;white-space:nowrap}
+  .score b{color:var(--accent2)}
+  .filterbtn{font-family:'JetBrains Mono',monospace;font-size:.72rem;border:1px solid var(--ink);background:transparent;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.2s}
+  .filterbtn:hover{background:var(--ink);color:var(--paper)}
+
+  /* ---------- Card ---------- */
+  .card{
+    background:linear-gradient(180deg,#fffdf8,#fbf6ec);
+    border:1.5px solid var(--ink);
+    border-radius:4px;
+    box-shadow:var(--shadow);
+    padding:26px 26px 24px;
+    margin:24px 0;
+    position:relative;
+    scroll-margin-top:90px;
+  }
+  .card::before{content:"";position:absolute;left:-1.5px;top:18px;bottom:18px;width:5px;background:var(--accent);border-radius:4px 0 0 4px}
+  .qtop{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:6px}
+  .qnum{font-family:'Fraunces',serif;font-weight:900;font-size:1.55rem;color:var(--accent);line-height:1}
+  .qtopic{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:var(--accent2);padding:4px 9px;border-radius:20px;white-space:nowrap;align-self:flex-start}
+  .qtopic[data-t="calcul"]{background:var(--gold)}
+  .qtopic[data-t="piege"]{background:var(--accent)}
+  .qtext{font-size:1.12rem;font-weight:500;margin:6px 0 4px}
+  pre.code{
+    font-family:'JetBrains Mono',monospace;font-size:.84rem;line-height:1.5;
+    background:#211f1b;color:#f4efe6;border-radius:8px;padding:14px 16px;margin:12px 0;overflow-x:auto;
+    border-left:4px solid var(--gold);
+  }
+  pre.code .cm{color:#c9b98f}
+
+  .opts{list-style:none;margin:14px 0 0;display:flex;flex-direction:column;gap:9px}
+  .opt{
+    display:flex;gap:12px;align-items:flex-start;
+    border:1.4px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;
+    background:rgba(255,255,255,.55);transition:transform .12s, border-color .15s, background .15s;
+    font-size:.99rem;
+  }
+  .opt:hover{border-color:var(--ink);transform:translateX(3px)}
+  .opt .lt{font-family:'JetBrains Mono',monospace;font-weight:700;border:1.4px solid var(--ink);border-radius:6px;width:26px;height:26px;display:grid;place-items:center;flex:none;font-size:.82rem;transition:.15s}
+  .opt.correct{border-color:var(--good);background:rgba(31,93,76,.13)}
+  .opt.correct .lt{background:var(--good);color:#fff;border-color:var(--good)}
+  .opt.wrong{border-color:var(--bad);background:rgba(163,48,42,.10)}
+  .opt.wrong .lt{background:var(--bad);color:#fff;border-color:var(--bad)}
+  .opt.locked{cursor:default}
+  .opt.locked:hover{transform:none}
+  .opt .mark{margin-left:auto;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.78rem;opacity:0;align-self:center}
+  .opt.correct .mark{opacity:1;color:var(--good)}
+  .opt.wrong .mark{opacity:1;color:var(--bad)}
+
+  .expl{
+    margin-top:16px;border-top:1.5px dashed var(--line);padding-top:15px;
+    font-size:.97rem;opacity:0;max-height:0;overflow:hidden;transition:opacity .4s, max-height .5s;
+  }
+  .expl.show{opacity:1;max-height:1600px}
+  .expl .verdict{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;display:inline-block;margin-bottom:8px;padding:3px 10px;border-radius:20px}
+  .expl .verdict.ok{background:rgba(31,93,76,.15);color:var(--good)}
+  .expl .verdict.no{background:rgba(163,48,42,.13);color:var(--bad)}
+  .expl h4{font-family:'Fraunces',serif;font-size:1.05rem;margin:10px 0 4px}
+  .expl p{margin:6px 0}
+  .expl b{color:var(--accent)}
+  .formula{
+    font-family:'JetBrains Mono',monospace;font-size:.86rem;line-height:1.65;
+    background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent2);
+    border-radius:8px;padding:12px 14px;margin:11px 0;overflow-x:auto;white-space:pre-wrap;
+  }
+  .formula em{color:var(--accent);font-style:normal;font-weight:700}
+  .warn{background:rgba(184,134,11,.12);border:1px solid var(--gold);border-radius:8px;padding:10px 13px;margin:11px 0;font-size:.92rem}
+  .warn::before{content:"⚠ ";font-weight:700}
+
+  /* ---------- Final ---------- */
+  #final{display:none;text-align:center;padding:50px 30px;margin-top:30px}
+  #final.show{display:block;animation:fade .6s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  #final .big{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(3rem,14vw,6rem);line-height:1;color:var(--accent)}
+  #final .lbl{font-family:'JetBrains Mono',monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-size:.8rem}
+  #final .verdict-txt{font-size:1.3rem;font-family:'Fraunces',serif;margin:16px 0}
+  .btn{font-family:'JetBrains Mono',monospace;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);padding:13px 24px;border-radius:8px;cursor:pointer;margin-top:20px;transition:.2s}
+  .btn:hover{background:transparent;color:var(--ink)}
+  .hidden{display:none !important}
+  footer{text-align:center;margin-top:40px;font-size:.82rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Esame Scritto · 09/04/2026</div>
+    <h1>Architettura<br>dei Calcolatori</h1>
+    <p class="sub">Quiz interactif reconstruit à partir des deux versions de l'examen. Choisis une réponse&nbsp;: la correction et l'explication (avec formules) apparaissent aussitôt. Rien n'est pré-rempli — à toi de jouer.</p>
+    <div class="meta">
+      <span class="tag" id="qcount">— questions</span>
+      <span class="tag">Réponds librement</span>
+      <span class="tag">Explications en français</span>
+    </div>
+  </header>
+
+  <div class="hud">
+    <div class="hud-inner">
+      <div class="bar"><i id="barfill"></i></div>
+      <span class="score">Score <b id="scoreNow">0</b> / <span id="scoreTot">0</span> &nbsp;·&nbsp; <span id="answered">0</span> répondues</span>
+      <button class="filterbtn" id="toggleCalc">Voir seulement les calculs</button>
+    </div>
+  </div>
+
+  <main id="quiz"></main>
+
+  <section id="final">
+    <div class="lbl">Résultat</div>
+    <div class="big"><span id="finalScore">0</span><span style="font-size:.4em;color:var(--muted)">/<span id="finalTot">0</span></span></div>
+    <div class="verdict-txt" id="finalMsg"></div>
+    <button class="btn" onclick="location.reload()">Recommencer</button>
+  </section>
+
+  <footer>Refait & vérifié calcul par calcul · bonne révision ✦</footer>
+</div>
+
+<script>
+const Q = [
+  /* ========== CACHE / MÉMOIRE ========== */
+  {
+    topic:"Mémoire", t:"calcul",
+    q:"Una cache ha Hit Rate del 90%, tempo di accesso di 2 Tck; il tempo di miss per accedere al livello inferiore di gerarchia è 20 Tck. Quanto è il tempo di accesso medio?",
+    opts:["6 Tck","20 Tck","3,8 Tck","4 Tck"], correct:2,
+    formula:"t_moyen = HR · t_hit + (1−HR) · t_miss\n= 0,9 · <em>2</em> + 0,1 · <em>20</em>\n= 1,8 + 2 = <em>3,8 Tck</em>",
+    expl:"On pondère par la probabilité de chaque cas. Ici l'énoncé donne directement le temps total d'un miss (20 Tck), donc on fait la moyenne pondérée.",
+    warn:"Si l'énoncé donnait une <i>pénalité</i> de miss qui s'ajoute au hit, ce serait t_hit + (1−HR)·pénalité = 2 + 0,1·20 = 4 Tck. Lis bien le mot « tempo di miss » : ici c'est le temps complet → 3,8."
+  },
+  {
+    topic:"Mémoire", t:"calcul", piege:true,
+    q:"Una CPU con 32 bit di indirizzo ha una cache con linee da 32 byte, capacità 8 Mbyte, 8-way associative, vuota. Legge in loop un vettore a[i] (256 byte, indirizzo A0F0F080) poi un vettore b[i] (256 byte, indirizzo A2F0F1A0). Al termine la cache avrà:",
+    opts:[
+      "Tutti gli elementi in cache, a e b in linee diverse ed in set differenti",
+      "Tutti in cache, alcuni valori di a e b nello stesso set ma in linee diverse",
+      "Alcuni elementi di a rimpiazzati da b (stesso set, tag diversi)",
+      "Alcuni elementi di a rimpiazzati da b (stessa linea e stesso set)"],
+    correct:0,
+    formula:"Ligne = 32 o = 2⁵  → offset = 5 bits\nCapacité = 8 Mo = 2²³  → 2¹⁸ lignes\n8-way → sets = 2¹⁸/2³ = 2¹⁵  → index = 15 bits\n\nIndex(a) = (A0F0F080 mod 2²⁰) ÷ 32 = 0x0F080 ÷ 32 = set <em>1924</em>\nIndex(b) = 0x0F1A0 ÷ 32 = set <em>1933</em>\nÉcart = (0xF1A0−0xF080)=0x120=288 o = <em>9 lignes</em>\n\na occupe 256/32 = 8 lignes → sets 1924…1931\nb occupe 8 lignes → sets 1933…1940",
+    expl:"Les deux vecteurs tombent dans des <b>sets entièrement différents</b> (il reste même un set vide, 1932, entre les deux). Aucun conflit, aucun remplacement → tout rentre, lignes et sets distincts.",
+    warn:"Sur la copie la réponse cochée semble être B (« stesso set »). Or l'écart de 9 lignes pour des vecteurs de 8 lignes ⇒ pas de chevauchement de set. Vérifie bien les adresses : c'est A."
+  },
+  {
+    topic:"Concepts",
+    q:"La località temporale ci dice che…",
+    opts:[
+      "È probabile che un dato usato in un istante possa essere riusato da un utente locale",
+      "È probabile che un dato in una locazione vicina a quella usata possa essere usato",
+      "È probabile che un dato usato in un istante possa essere riusato in un tempo localmente vicino",
+      "È probabile che un dato vicino in memoria sia usato in un tempo localmente vicino"],
+    correct:2,
+    expl:"<b>Locality temporelle</b> = la dimension du <i>temps</i> : ce qu'on vient d'utiliser, on le réutilise bientôt. La B/D parlent de la <b>localité spatiale</b> (adresses voisines)."
+  },
+  {
+    topic:"Disque",
+    q:"Il processo di lettura di un disco fisso prevede:",
+    opts:[
+      "Il solenoide sulla testina NON percorso da corrente, senza contatto col piatto, e una corrente indotta sulla testina con segno + o − secondo l'orientamento delle particelle",
+      "Idem ma tramite il contatto con il piatto",
+      "Il solenoide percorso da corrente che, tramite contatto, polarizza le particelle ferromagnetiche",
+      "Il solenoide percorso da corrente che, senza contatto, polarizza le particelle ferromagnetiche"],
+    correct:0,
+    expl:"En <b>lecture</b>, la bobine de la tête n'est PAS alimentée : ce sont les domaines magnétisés du plateau qui, en défilant, <b>induisent</b> un courant dans la tête (signe ± selon l'orientation). La tête ne touche jamais le plateau (coussin d'air).",
+    warn:"C et D décrivent l'<i>écriture</i> (on alimente la bobine pour polariser). Sur la copie D semble cochée → c'est un piège : pour la LECTURE la bonne réponse est A."
+  },
+  {
+    topic:"Disque",
+    q:"In un disco fisso, per cilindro si intende:",
+    opts:[
+      "L'insieme, sul singolo piatto, di tutte le tracce equidistanti dal centro",
+      "L'insieme, sui vari piatti, di tutti i settori equidistanti dal centro",
+      "L'insieme, sui vari piatti, di tutte le tracce equidistanti dal centro",
+      "L'insieme, sul singolo piatto, di tutti i settori equidistanti dal centro"],
+    correct:2,
+    expl:"Un <b>cylindre</b> = toutes les pistes de même rayon empilées sur les <b>différents plateaux</b>. Les têtes étant alignées, on accède à tout le cylindre sans bouger le bras (gain de temps)."
+  },
+
+  /* ========== PIPELINE ========== */
+  {
+    topic:"Pipeline", t:"calcul", piege:true,
+    q:"Pipeline a K stadi, BTB con S stati. Due cicli innestati : ciclo interno N1 istruzioni eseguito L1 volte ; ciclo esterno N2 istruzioni aggiuntive eseguito L2 volte. In hit : S1 stalli se predizione sbagliata, 0 se corretta. In miss : sempre SM stalli. K=5; S=2; N1=20; N2=40; L1=30; L2=100; S1=2; SM=3; miss rate 5%. Numero (arrotondato) di stalli introdotti dai salti?",
+    opts:["Circa 123000","Circa 850","Circa 660","Circa 440"],
+    correct:2,
+    formula:"Branchements exécutés :\n  interne = L1·L2 = 30·100 = 3000\n  externe = L2 = 100\n  total B = <em>3100</em>\n\nStalls de MISS BTB = miss·B·SM = 0,05·3100·3 = <em>465</em>\n\nMauvaises prédictions (1 par sortie de boucle) :\n  ≈ L2 + 1 = 100 + 1 = 101\nStalls = (1−miss)·101·S1 = 0,95·101·2 ≈ <em>192</em>\n\nTOTAL ≈ 465 + 192 = <em>657 ≈ 660</em>",
+    expl:"On additionne deux sources : (1) les <b>miss du BTB</b> (taux 5 % sur tous les branchements, SM stalls chacun) et (2) les <b>mauvaises prédictions sur les hits</b>, qui n'arrivent qu'aux sorties de boucle (≈ une par bouclage).",
+    warn:"La réponse 850 correspond à compter 2 mauvaises prédictions par boucle (entrée + sortie). Mais ce même modèle donnerait un résultat faux sur la version jumelle (Q suivante). Le modèle cohérent « 1 misprédiction par sortie » donne 660 ici et 1914 là → réponse C."
+  },
+  {
+    topic:"Pipeline", t:"calcul",
+    q:"Stessa pipeline e BTB. K=5; S=4; N1=20; N2=40; L1=50; L2=200; S1=2; SM=3; miss rate 5%. Numero (arrotondato) di stalli introdotti dai salti?",
+    opts:["Circa 1914","Circa 1500","Circa 406000","Circa 2300"],
+    correct:0,
+    formula:"Branchements : B = L1·L2 + L2 = 50·200 + 200 = <em>10200</em>\n\nStalls de MISS = 0,05·10200·3 = <em>1530</em>\n\nMauvaises prédictions ≈ L2 + 1 = 201\nStalls = 0,95·201·2 ≈ <em>382</em>\n\nTOTAL ≈ 1530 + 382 = <em>1912 ≈ 1914</em>",
+    expl:"Exactement la même méthode que la question précédente — c'est ce qui valide le modèle « 1 misprédiction par sortie de boucle ». Le résultat colle parfaitement à la réponse A."
+  },
+  {
+    topic:"Pipeline", t:"piege",
+    q:"Nelle pipeline, le write-after-read (WAR) sono…",
+    opts:[
+      "Alee di dati: in una pipeline si scrivono dati non ancora letti al termine della pipeline dalla stessa istruzione",
+      "Alee di dati: in un'architettura a più pipeline un'istruzione successiva scrive dati non ancora letti",
+      "Alee di controllo: si leggono dati non ancora scritti dall'istruzione precedente",
+      "Alee di controllo: si fa una read dopo un salto"],
+    correct:1,
+    expl:"WAR = <b>aléa de données</b> (pas de contrôle). Une instruction <i>postérieure</i> écrit un registre/donnée qu'une instruction antérieure n'a pas encore lu. En pipeline simple in-order c'est rare ; ça apparaît avec <b>plusieurs pipelines</b> / exécution dans le désordre."
+  },
+  {
+    topic:"Concepts",
+    q:"Cosa è il parallelismo temporale nell'architettura dei calcolatori?",
+    opts:[
+      "Il pipelining in un'unità di elaborazione o in più unità in cascata",
+      "La presenza di più unità di calcolo, memoria e I/O",
+      "La quantità di concorrenza disponibile in un algoritmo",
+      "La replicazione di unità funzionali usate nello stesso tempo per una computazione"],
+    correct:0,
+    expl:"Parallélisme <b>temporel</b> = <b>pipeline</b> : on découpe le travail en étages et on fait avancer plusieurs instructions à des stades différents. Le parallélisme <b>spatial</b>, c'est dupliquer des unités (réponse D)."
+  },
+
+  /* ========== HAMMING ========== */
+  {
+    topic:"Hamming", t:"calcul",
+    q:"Parola codificata 1100 1100 0010. Corretta o sbagliata secondo Hamming? (bit numerati da 1 a 12)",
+    opts:["Ha un errore nel bit 11","Ha un errore nel bit 12","È corretta","Ha un errore nel bit 3"],
+    correct:0,
+    formula:"bits :  1 2 3 4 5 6 7 8 9 10 11 12\n        1 1 0 0 1 1 0 0 0 0  1  0\n\nP1 (1,3,5,7,9,11)  = 1+0+1+0+0+1 = 3 → impair → <em>1</em>\nP2 (2,3,6,7,10,11) = 1+0+1+0+0+1 = 3 → impair → <em>1</em>\nP4 (4,5,6,7,12)    = 0+1+1+0+0 = 2 → pair  → <em>0</em>\nP8 (8,9,10,11,12)  = 0+0+0+1+0 = 1 → impair → <em>1</em>\n\nSyndrome = P8 P4 P2 P1 = 1011₂ = <em>11</em>",
+    expl:"On vérifie les 4 bits de parité (positions 1,2,4,8). Le syndrome lu en binaire donne directement la position erronée. Ici <b>1011 = 11</b> → erreur sur le bit 11."
+  },
+  {
+    topic:"Hamming", t:"calcul",
+    q:"Parola binaria di 8 bit 0111 1010 codificata con Hamming. Si riceve la parola di 12 bit con un errore sul bit 4. Com'è la parola ricevuta?",
+    opts:["0110 1111 1010","0100 1110 1010","0011 1111 1110","0111 1111 1110"],
+    correct:1,
+    formula:"Données (3,5,6,7,9,10,11,12) = 0 1 1 1 1 0 1 0\n\nP1(1,3,5,7,9,11)=0+1+1+1+1=4 pair → 0\nP2(2,3,6,7,10,11)=0+1+1+0+1=3 impair → 1\nP4(4,5,6,7,12)=1+1+1+0=3 impair → 1\nP8(8,9,10,11,12)=1+0+1+0=2 pair → 0\n\nMot codé = 0 1 0 1 1 1 1 0 1 0 1 0 → 0101 1110 1010\nErreur bit 4 : 1 → 0\nReçu = <em>0100 1110 1010</em>",
+    expl:"On code d'abord (calcul des 4 parités, positions de données = 3,5,6,7,9,10,11,12), puis on <b>inverse le bit 4</b> pour simuler l'erreur transmise. Résultat : réponse B."
+  },
+
+  /* ========== BOOLE / LOGIQUE ========== */
+  {
+    topic:"Booléen", t:"calcul",
+    q:"Quale espressione è equivalente a  Y = B·C' D + A·B·D' + B·C + A'·C + A'·C' D + A·B ?",
+    opts:["B' C + A B + C' D","A C + B' C","A' D + B' D","A' D + A B + A' C"],
+    correct:3,
+    formula:"A B + A B D' = A B          (X + X·Y = X)\nA' C + B C = C(A'+B)\nA' C'D + B C'D = C'D(A'+B)\nY = A B + (A'+B)(C + C'D)\nC + C'D = C + D            (absorption)\nY = A B + (A'+B)(C+D)\n  = A B + A'C + A'D + B C + B D\nB C ⊆ (A B + A'C) ;  B D ⊆ (A B + A'D)\nY = <em>A' D + A B + A' C</em>",
+    expl:"On regroupe par facteur commun, on applique l'absorption (C+C'D=C+D), puis on montre que B·C et B·D sont déjà couverts par A·B, A'·C et A'·D → réponse D."
+  },
+  {
+    topic:"Booléen", t:"calcul",
+    q:"Quale espressione è equivalente a  F = (A'·B·C' + D')' · (A·C' + D·B + 1) + A'·B + A·B ?",
+    opts:["F = A + B + C + D","F = C'·(B + A D)","F = A + C'·D","F = B + D"],
+    correct:3,
+    formula:"(A C' + D B + 1) = <em>1</em>        (X + 1 = 1)\n(A'B C' + D')' = (A'B C')'·(D')'   (De Morgan)\n            = (A + B' + C)·D\nA'B + A B = B\nF = (A + B' + C)·D + B\n  = A D + B'D + C D + B\nB + B'D = B + D            (absorption)\nF = A D + C D + B + D = <em>B + D</em>",
+    expl:"Le piège central : <b>(… + 1) = 1</b> efface tout un terme. Puis De Morgan, et l'absorption B + B'D = B + D fait s'effondrer le reste → réponse D."
+  },
+  {
+    topic:"Booléen",
+    q:"La forma canonica SP (somma di prodotti) :",
+    opts:[
+      "Si deriva prendendo in AND tutti i mintermini delle righe con uscita 1 ; variabile diretta se appare 1, negata se 0",
+      "Si deriva prendendo in OR tutti i maxtermini delle righe con uscita 1 ; diretta se 0, negata se 1",
+      "Si deriva prendendo in AND tutti i maxtermini delle righe con uscita 1 ; diretta se 0, negata se 1",
+      "Si deriva prendendo in OR tutti i mintermini delle righe con uscita 1 ; diretta se appare 1, negata se 0"],
+    correct:3,
+    expl:"<b>SP = Somme de Produits</b> : on fait l'<b>OR</b> (somme) des <b>mintermes</b> (produits) des lignes où la sortie vaut 1. Dans chaque minterme : variable directe si elle vaut 1, niée si elle vaut 0. (La forme PS, elle, utilise l'AND des maxtermes sur les lignes à 0.)"
+  },
+  {
+    topic:"Booléen",
+    q:"Nell'algebra di Boole, il teorema di complementarietà prevede che :",
+    opts:["X · 1 = X","X · 0 = 0","X · X = X","X · X' = 0"],
+    correct:3,
+    expl:"<b>Complémentarité</b> : une variable ET son complément ne peuvent être vrais ensemble → X·X' = 0 (et la version duale X + X' = 1). Les autres sont l'identité, l'élément absorbant et l'idempotence."
+  },
+  {
+    topic:"Booléen",
+    q:"Detto B l'insieme dei simboli dell'algebra di Boole, una funzione completamente specificata di n variabili :",
+    opts:[
+      "Ha dominio B e codominio B alla n",
+      "Può sempre essere scomposta in funzioni con dominio B e codominio B",
+      "Ha dominio B alla n e codominio B",
+      "Ha dominio B alla n e codominio B alla n"],
+    correct:2,
+    expl:"Elle prend <b>n entrées booléennes</b> (domaine = Bⁿ) et produit <b>une seule sortie booléenne</b> (codomaine = B). Donc f : Bⁿ → B."
+  },
+
+  /* ========== RISC-V / ISA ========== */
+  {
+    topic:"RISC-V",
+    q:"La sequenza :  MAR←PC ; MDR←M[MAR] ; IR←MDR ; PC←PC+N,DECODE ; A←R[IR(r2)] ; B←IR(immed) ; Aluout←A+B ; MAR←Aluout ; MDR←M[MAR] ; R[IR(r1)]←MDR  è :",
+    opts:[
+      "Load su r2 di una variabile all'indirizzo in r1 + immed",
+      "Load su r1 di una variabile all'indirizzo in r2 + immed",
+      "Somma di r2 con un immed che salva in r1",
+      "Store di r1 in una variabile all'indirizzo in r2 + immed"],
+    correct:1,
+    formula:"adresse = A + B = R[r2] + immed\nMDR ← M[adresse]      (on LIT la mémoire)\nR[r1] ← MDR           (on écrit dans r1)",
+    expl:"Après le fetch, on calcule <b>r2 + immédiat</b> comme adresse, on <b>lit</b> la mémoire (M[adresse]→MDR) et on range la valeur dans <b>r1</b>. C'est donc un <b>Load</b> : R[r1] = M[R[r2] + immed]."
+  },
+  {
+    topic:"RISC-V", t:"piege",
+    q:"Qual è l'effetto dell'istruzione  sw x9, 12(x10) ?",
+    opts:[
+      "Memoria[x10 + 12] = x9 (scrive una word)",
+      "x9 = Memoria[x10 + 12] (carica una word)",
+      "Memoria[x9 + 12] = x10 (scrive una word)",
+      "x10 = Memoria[x9 + 12] (carica una word)"],
+    correct:0,
+    formula:"sw  rs2, offset(rs1)  →  Mem[rs1 + offset] = rs2\nsw  x9, 12(x10)       →  <em>Mem[x10 + 12] = x9</em>",
+    expl:"<b>sw = store word</b> : on écrit le contenu du registre (x9) en mémoire à l'adresse base+offset (x10+12). La base est entre parenthèses, l'offset devant.",
+    warn:"La réponse B (« x9 = Memoria… ») correspond à un <b>load</b> (lw), pas à un store. Sur la copie B semble cochée → attention, la bonne réponse est A."
+  },
+  {
+    topic:"RISC-V",
+    q:"Quale è il risultato dell'istruzione  lw x9, 32(x22) ?",
+    opts:[
+      "Carica il contenuto di Memoria[4 + x22] nel registro x9",
+      "Carica il contenuto di Memoria[32 + x22] nel registro x9",
+      "Salva il contenuto di x9 in Memoria[x22 + 32]",
+      "Salva il contenuto di x22 in Memoria[32]"],
+    correct:1,
+    formula:"lw rd, offset(rs1) → rd = Mem[rs1 + offset]\nlw x9, 32(x22)     → <em>x9 = Mem[x22 + 32]</em>",
+    expl:"<b>lw = load word</b> : on charge depuis l'adresse base+offset (x22+32) vers x9. L'offset (32) est en octets, pas divisé."
+  },
+  {
+    topic:"RISC-V",
+    q:"In RISC-V, quale registro è hardwired a zero (contiene sempre 0)?",
+    opts:["x1","x0","x8","x2"],
+    correct:1,
+    expl:"<b>x0</b> (alias <code>zero</code>) est câblé à 0 : lire donne toujours 0, écrire est ignoré. Pratique pour les <code>mv</code>, comparaisons, NOP, etc. (x1=ra, x2=sp, x8=s0/fp)."
+  },
+  {
+    topic:"RISC-V", t:"piege",
+    q:"Il formato istruzione di tipo R, in RISC-V :",
+    opts:[
+      "Per aritmetico NON immediate (add, sub), registri sorgente/destinazione a 8 bit",
+      "Per aritmetico immediate (add, sub), registri a 8 bit",
+      "Per aritmetico immediate (addi), registri a 5 bit",
+      "Per aritmetico NON immediate (add, sub), registri a 5 bit"],
+    correct:3,
+    expl:"Le format <b>R</b> sert aux opérations <b>registre-registre, sans immédiat</b> (add, sub, and, or…). Avec 32 registres, chaque champ rs1/rs2/rd fait <b>5 bits</b> (2⁵=32). Les versions <i>immediate</i> (addi) utilisent le format I."
+  },
+  {
+    topic:"Concepts",
+    q:"Un'architettura ha metodo di indirizzamento allineato :",
+    opts:[
+      "Se può allineare istruzioni e dati nella stessa memoria",
+      "Se il dato può essere allocato solo ad indirizzi pari o multipli di 4",
+      "Se il dato può essere allocato solo ad indirizzi multipli della dimensione della parola di trasferimento sul bus dati",
+      "Se il dato può essere allocato solo ad indirizzi multipli della dimensione del bus indirizzi"],
+    correct:2,
+    expl:"<b>Adressage aligné</b> : une donnée de taille S ne peut être placée qu'à une adresse <b>multiple de S</b> (la taille du mot transféré sur le bus de données). Ça évite les accès « à cheval » sur deux mots.",
+    warn:"D parle de la taille du <i>bus d'adresses</i> — ce n'est pas le critère. Le critère porte sur la taille de la donnée / du mot de transfert → réponse C."
+  },
+  {
+    topic:"Concepts",
+    q:"Nel modello di von Neumann, quale componente contiene sia le istruzioni sia i dati durante l'esecuzione?",
+    opts:["L'unità di controllo","I registri di I/O","La memoria principale","L'ALU"],
+    correct:2,
+    expl:"Le principe de von Neumann : <b>programme et données partagent la même mémoire principale</b> (stored-program). C'est ce qui le distingue de l'architecture Harvard (mémoires séparées)."
+  },
+
+  /* ========== PERFORMANCE ========== */
+  {
+    topic:"Performance", t:"calcul",
+    q:"Un'applicazione C++ dura 20 s. Con un nuovo compilatore, l'eseguibile usa solo il 70% delle istruzioni del vecchio programma, ma le istruzioni sono più complesse e aumentano del 10% il CPI medio. È più veloce? Quanto ci mette?",
+    opts:["No, stesso processore","Sì, 15,4 s","Sì, 9,9 s","Sì, 12,7 s"],
+    correct:1,
+    formula:"T = IC · CPI · T_clock   (même CPU → T_clock identique)\nT_new = (0,70·IC) · (1,10·CPI) · T_clock\n      = 0,70 · 1,10 · T_old\n      = 0,77 · 20 = <em>15,4 s</em>",
+    expl:"Le temps CPU est le produit IC × CPI × T_clock. On multiplie simplement les facteurs de variation : 0,70 × 1,10 = 0,77. Donc 23 % plus rapide → 15,4 s."
+  },
+  {
+    topic:"Performance", t:"calcul",
+    q:"Un'applicazione C++ dura 15 s. Nuovo compilatore : 60% delle istruzioni, ma +10% di CPI medio. È più veloce? Quanto ci mette?",
+    opts:["No, stesso processore","Sì, 27,5 s","Sì, 9,9 s","Sì, 8,2 s"],
+    correct:2,
+    formula:"T_new = 0,60 · 1,10 · 15\n      = 0,66 · 15 = <em>9,9 s</em>",
+    expl:"Même raisonnement : 0,60 × 1,10 = 0,66, donc 9,9 s. (Variante de la question précédente avec d'autres chiffres.)"
+  },
+  {
+    topic:"Performance",
+    q:"La CPU A impiega 100 cicli per 10 istruzioni ; la CPU B impiega 120 cicli per le stesse 10 istruzioni. Quale affermazione è vera?",
+    opts:[
+      "A ha prestazioni sempre maggiori di B se A ha una frequenza di clock maggiore o uguale a quella di B",
+      "A ha prestazioni sempre maggiori di B se A ha una frequenza minore o uguale a quella di B",
+      "B ha prestazioni sempre maggiori indipendentemente dalla frequenza",
+      "B ha prestazioni maggiori se A ha frequenza maggiore di B"],
+    correct:0,
+    formula:"Temps = nb_cycles / fréquence\nT_A = 100 / f_A      T_B = 120 / f_B\nSi f_A ≥ f_B :  100/f_A ≤ 100/f_B < 120/f_B = T_B\n→ T_A < T_B  → A plus rapide",
+    expl:"A fait le même travail en <b>moins de cycles</b> (100 vs 120). Si en plus sa fréquence est ≥, son temps est forcément inférieur → A est toujours plus rapide. À fréquence plus basse, ça pourrait s'inverser, d'où le « maggiore o uguale »."
+  },
+  {
+    topic:"Performance",
+    q:"Dalla legge di Amdahl si desume che, se un miglioramento architetturale è poco usato, allora :",
+    opts:[
+      "Non è mai conveniente",
+      "Anche con speedup parziale infinito, lo speedup complessivo non cambierebbe",
+      "Anche con speedup parziale infinito, lo speedup complessivo è limitato dalla percentuale di tempo in cui è usato",
+      "Se la frequenza fosse alta e lo speedup parziale infinito, lo speedup complessivo potrebbe essere illimitato"],
+    correct:2,
+    formula:"Speedup = 1 / [ (1−f) + f/s ]\nSi s → ∞ :  Speedup_max = 1 / (1−f)\n(f = fraction de temps où l'amélioration sert)",
+    expl:"<b>Loi d'Amdahl</b> : le gain global est plafonné par la fraction <i>non</i> améliorée. Si l'amélioration ne sert que rarement (f petit), même un speedup local infini ne donne qu'un gain global minime."
+  },
+  {
+    topic:"Multicore",
+    q:"CPU multicore con snooping e protocollo MESI. Se su Core A una linea è in stato EXCLUSIVE significa che :",
+    opts:[
+      "È stata modificata da Core A ed è di suo esclusivo possesso (altri possono averla shared)",
+      "È stata modificata da un altro core single owner e Core A non ha possesso esclusivo",
+      "NON è stata modificata da Core A, che ne è single owner, e il valore è coerente con la memoria inferiore",
+      "È stata modificata da Core A ed è di suo esclusivo possesso (altri possono averla invalid)"],
+    correct:2,
+    expl:"MESI · état <b>E (Exclusive)</b> : la ligne est <b>propre</b> (= identique à la mémoire, non modifiée) ET <b>présente dans un seul cache</b>. C'est le seul propriétaire mais rien n'a encore été écrit. Si on l'écrit, elle passe en <b>M (Modified)</b>.",
+    warn:"La réponse D décrit l'état <b>M</b> (modifiée). Le mot clé d'EXCLUSIVE est « non modifiée + cohérente avec la mémoire » → réponse C."
+  },
+
+  /* ========== RÉSEAUX LOGIQUES / ARCHITECTURE ========== */
+  {
+    topic:"Réseaux logiques",
+    q:"La proprietà di interconnessione delle reti logiche prevede che :",
+    opts:[
+      "Nelle forme minime SP o PS il numero di livelli sia al massimo 4ⁿ (n = segnali di ingresso)",
+      "L'interconnessione di più reti logiche (con ingressi = segnali esterni o uscite di altre reti, e uscite = segnali esterni o ingressi di altre reti) è ancora una rete logica",
+      "Nelle forme minime SP o PS il numero di livelli sia al massimo 2ⁿ",
+      "Sia sempre possibile connettere assieme le uscite di reti diverse, purché la somma dei bit di uscita ≤ numero di segnali di ingresso"],
+    correct:1,
+    expl:"<b>Propriété de fermeture / interconnexion</b> : en câblant plusieurs réseaux logiques entre eux (sorties→entrées), on obtient <b>encore un réseau logique</b>. C'est ce qui permet de composer hiérarchiquement les circuits."
+  },
+  {
+    topic:"Concepts",
+    q:"Un'architettura si dice parallela :",
+    opts:[
+      "Se l'elemento di elaborazione ha la ALU con molti bit interni",
+      "Se ha elementi di elaborazione che comunicano attraverso la rete",
+      "Se ha elementi di elaborazione che lavorano con molti bit contemporaneamente",
+      "Se ha elementi di elaborazione che cooperano e comunicano per risolvere efficientemente un problema complesso"],
+    correct:3,
+    expl:"L'essence du <b>parallélisme</b> : plusieurs éléments de traitement qui <b>coopèrent et communiquent</b> pour résoudre ensemble un problème. Ce n'est pas une question de largeur d'ALU (ça c'est le parallélisme « de bit »)."
+  },
+  {
+    topic:"Performance",
+    q:"Il MIPS si calcola :",
+    opts:[
+      "Moltiplicando il CPI medio per la frequenza di clock (MHz)",
+      "Moltiplicando la frequenza di clock (MHz) per il CPI medio",
+      "Dividendo la frequenza di clock (MHz) per il CPI medio",
+      "Dividendo il numero di clock di un programma per il tempo di clock"],
+    correct:2,
+    formula:"MIPS = f / (CPI · 10⁶)\nSi f est en MHz :  MIPS = <em>f(MHz) / CPI</em>",
+    expl:"MIPS = millions d'instructions/seconde. On part de f/CPI (instructions par seconde), et le MHz contient déjà le 10⁶ → MIPS = fréquence en MHz ÷ CPI moyen."
+  },
+  {
+    topic:"Concepts",
+    q:"Il termine « architettura » di un calcolatore fu definito :",
+    opts:[
+      "Da Alan Turing nella Macchina di Turing, fine anni '30",
+      "Da Von Neumann nella descrizione dei primi computer, fine anni '40",
+      "Dall'IBM per la famiglia S/360, anni '60",
+      "Da Babbage con l'Analytical Engine, inizio '800"],
+    correct:2,
+    expl:"Le terme <b>« architecture »</b> (au sens : interface vue par le programmeur, indépendante de l'implémentation) a été introduit par <b>IBM</b> pour la famille <b>System/360</b> dans les années 1960 — première vraie séparation ISA / micro-architecture."
+  }
+];
+
+/* ---------- Build ---------- */
+const quiz = document.getElementById('quiz');
+const LETTERS = ['A','B','C','D'];
+let answered = 0, score = 0;
+document.getElementById('scoreTot').textContent = Q.length;
+document.getElementById('finalTot').textContent = Q.length;
+document.getElementById('qcount').textContent = Q.length + ' questions';
+
+Q.forEach((item, i) => {
+  const card = document.createElement('article');
+  card.className = 'card';
+  if (item.t === 'calcul') item._t = 'calcul';
+  card.dataset.calc = (item.t === 'calcul') ? '1' : '0';
+
+  let topicClass = item.piege ? 'piege' : (item.t === 'calcul' ? 'calcul' : 'concept');
+  let codeHtml = item.code ? `<pre class="code">${item.code}</pre>` : '';
+  let optsHtml = item.opts.map((o,j)=>`
+    <li class="opt" data-i="${j}">
+      <span class="lt">${LETTERS[j]}</span>
+      <span class="ot">${o}</span>
+      <span class="mark"></span>
+    </li>`).join('');
+
+  let formulaHtml = item.formula ? `<div class="formula">${item.formula}</div>` : '';
+  let warnHtml = item.warn ? `<div class="warn">${item.warn}</div>` : '';
+
+  card.innerHTML = `
+    <div class="qtop">
+      <div style="display:flex;gap:12px;align-items:baseline">
+        <span class="qnum">${String(i+1).padStart(2,'0')}</span>
+      </div>
+      <span class="qtopic" data-t="${topicClass}">${item.topic}</span>
+    </div>
+    <p class="qtext">${item.q}</p>
+    ${codeHtml}
+    <ul class="opts">${optsHtml}</ul>
+    <div class="expl">
+      <span class="verdict"></span>
+      ${formulaHtml}
+      <p>${item.expl}</p>
+      ${warnHtml}
+    </div>`;
+
+  const opts = card.querySelectorAll('.opt');
+  const expl = card.querySelector('.expl');
+  const verdict = card.querySelector('.verdict');
+
+  opts.forEach(opt=>{
+    opt.addEventListener('click', ()=>{
+      if (card.dataset.done) return;
+      card.dataset.done = '1';
+      const chosen = +opt.dataset.i;
+      const right = item.correct;
+      opts.forEach(o=>{
+        o.classList.add('locked');
+        const idx = +o.dataset.i;
+        if (idx === right){ o.classList.add('correct'); o.querySelector('.mark').textContent='✓ corretta'; }
+        if (idx === chosen && chosen !== right){ o.classList.add('wrong'); o.querySelector('.mark').textContent='✗ la tua'; }
+      });
+      if (chosen === right){ verdict.textContent='✓ Bonne réponse'; verdict.className='verdict ok'; score++; }
+      else { verdict.textContent='✗ Réponse fausse — réponse correcte : '+LETTERS[right]; verdict.className='verdict no'; }
+      expl.classList.add('show');
+      answered++;
+      updateHud();
+    });
+  });
+
+  quiz.appendChild(card);
+});
+
+function updateHud(){
+  document.getElementById('scoreNow').textContent = score;
+  document.getElementById('answered').textContent = answered;
+  document.getElementById('barfill').style.width = (answered/Q.length*100)+'%';
+  if (answered === Q.length) showFinal();
+}
+
+function showFinal(){
+  const f = document.getElementById('final');
+  document.getElementById('finalScore').textContent = score;
+  const pct = score/Q.length;
+  let msg;
+  if (pct === 1) msg = "Sans faute. Tu es prêt·e pour l'examen ✦";
+  else if (pct >= .8) msg = "Très solide — revois juste les pièges signalés en orange.";
+  else if (pct >= .6) msg = "Bonne base. Concentre-toi sur les calculs (pipeline, Hamming, perf).";
+  else msg = "Reprends les explications une à une : la méthode est plus importante que le résultat.";
+  document.getElementById('finalMsg').textContent = msg;
+  f.classList.add('show');
+  f.scrollIntoView({behavior:'smooth'});
+}
+
+/* filter calculs */
+let calcOnly = false;
+document.getElementById('toggleCalc').addEventListener('click', (e)=>{
+  calcOnly = !calcOnly;
+  document.querySelectorAll('.card').forEach(c=>{
+    c.classList.toggle('hidden', calcOnly && c.dataset.calc!=='1');
+  });
+  e.target.textContent = calcOnly ? 'Voir toutes les questions' : 'Voir seulement les calculs';
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz · RISC-V & Architettura</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Spectral:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c1a17;--paper:#f4efe6;--line:#cdbfa6;
+    --accent:#1a3d6e;--accent2:#1f5d4c;--gold:#b8860b;
+    --good:#1f5d4c;--bad:#a3302a;--muted:#6e655a;
+    --shadow:0 18px 40px -22px rgba(28,26,23,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Spectral',Georgia,serif;color:var(--ink);line-height:1.55;padding:0 0 80px;
+    background:radial-gradient(circle at 20% -10%, rgba(26,61,110,.09), transparent 45%),
+               radial-gradient(circle at 100% 0%, rgba(31,93,76,.07), transparent 40%),
+               var(--paper);background-attachment:fixed;}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(rgba(28,26,23,.03) 1px, transparent 1px);background-size:4px 4px;mix-blend-mode:multiply;}
+  .wrap{max-width:830px;margin:0 auto;padding:0 22px;position:relative;z-index:1}
+
+  header{padding:54px 0 24px;border-bottom:2px solid var(--ink);margin-bottom:24px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(2rem,6vw,3.3rem);line-height:.98;margin:.18em 0 .15em}
+  .sub{font-size:1.02rem;color:var(--muted);max-width:64ch}
+
+  .hud{position:sticky;top:0;z-index:20;background:linear-gradient(var(--paper),var(--paper) 72%,rgba(244,239,230,0));padding:12px 0 16px;margin-bottom:6px}
+  .hud-inner{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .bar{flex:1;min-width:140px;height:8px;border:1px solid var(--ink);border-radius:20px;overflow:hidden;background:rgba(255,255,255,.5)}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--gold));transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .score{font-family:'JetBrains Mono',monospace;font-size:.82rem;font-weight:700;white-space:nowrap}
+  .score b{color:var(--accent2)}
+  select,.filterbtn{font-family:'JetBrains Mono',monospace;font-size:.72rem;border:1px solid var(--ink);background:rgba(255,255,255,.6);padding:7px 10px;border-radius:8px;cursor:pointer;color:var(--ink)}
+  .filterbtn:hover{background:var(--ink);color:var(--paper)}
+
+  .card{background:linear-gradient(180deg,#fffdf8,#fbf6ec);border:1.5px solid var(--ink);border-radius:4px;box-shadow:var(--shadow);padding:24px 24px 22px;margin:22px 0;position:relative;scroll-margin-top:88px}
+  .card::before{content:"";position:absolute;left:-1.5px;top:18px;bottom:18px;width:5px;background:var(--accent);border-radius:4px 0 0 4px}
+  .card.done::before{background:var(--good)}.card.failed::before{background:var(--bad)}
+  .qtop{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:4px}
+  .qnum{font-family:'Fraunces',serif;font-weight:900;font-size:1.5rem;color:var(--accent);line-height:1}
+  .qtopic{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--accent2);padding:4px 9px;border-radius:20px;white-space:nowrap;align-self:flex-start}
+  .qtopic[data-t="calcul"]{background:var(--gold)}
+  .qtext{font-size:1.1rem;font-weight:500;margin:6px 0 2px}
+  pre.code{font-family:'JetBrains Mono',monospace;font-size:.84rem;line-height:1.5;background:#1a1e2e;color:#e8f0ff;border-radius:8px;padding:13px 15px;margin:11px 0;overflow-x:auto;border-left:4px solid var(--accent)}
+
+  .opts{list-style:none;margin:14px 0 0;display:flex;flex-direction:column;gap:9px}
+  .opt{display:flex;gap:12px;align-items:flex-start;border:1.4px solid var(--line);border-radius:10px;padding:11px 13px;cursor:pointer;background:rgba(255,255,255,.55);transition:transform .12s,border-color .15s,background .15s;font-size:.97rem}
+  .opt:hover{border-color:var(--ink);transform:translateX(3px)}
+  .opt .lt{font-family:'JetBrains Mono',monospace;font-weight:700;border:1.4px solid var(--ink);border-radius:6px;width:26px;height:26px;display:grid;place-items:center;flex:none;font-size:.82rem;transition:.15s}
+  .opt.correct{border-color:var(--good);background:rgba(31,93,76,.13)}
+  .opt.correct .lt{background:var(--good);color:#fff;border-color:var(--good)}
+  .opt.wrong{border-color:var(--bad);background:rgba(163,48,42,.10)}
+  .opt.wrong .lt{background:var(--bad);color:#fff;border-color:var(--bad)}
+  .opt.locked{cursor:default}.opt.locked:hover{transform:none}
+  .opt .mark{margin-left:auto;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.74rem;opacity:0;align-self:center;white-space:nowrap}
+  .opt.correct .mark{opacity:1;color:var(--good)}.opt.wrong .mark{opacity:1;color:var(--bad)}
+
+  .expl{margin-top:15px;border-top:1.5px dashed var(--line);padding-top:14px;font-size:.96rem;opacity:0;max-height:0;overflow:hidden;transition:opacity .4s,max-height .5s}
+  .expl.show{opacity:1;max-height:1800px}
+  .expl .verdict{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;display:inline-block;margin-bottom:8px;padding:3px 10px;border-radius:20px}
+  .expl .verdict.ok{background:rgba(31,93,76,.15);color:var(--good)}
+  .expl .verdict.no{background:rgba(163,48,42,.13);color:var(--bad)}
+  .expl p{margin:6px 0}.expl b{color:var(--accent)}
+  .formula{font-family:'JetBrains Mono',monospace;font-size:.85rem;line-height:1.65;background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent2);border-radius:8px;padding:11px 13px;margin:10px 0;overflow-x:auto;white-space:pre-wrap}
+  .formula em{color:var(--bad);font-style:normal;font-weight:700}
+  .trap{background:rgba(163,48,42,.08);border:1px solid var(--bad);border-radius:8px;padding:9px 12px;margin:10px 0;font-size:.9rem}
+  .trap::before{content:"⚑ Il tranello: ";font-weight:700;color:var(--bad);font-family:'JetBrains Mono',monospace;font-size:.78rem}
+
+  #final{display:none;text-align:center;padding:46px 28px;margin-top:26px}
+  #final.show{display:block;animation:fade .6s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  #final .big{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(3rem,14vw,6rem);line-height:1;color:var(--accent)}
+  #final .lbl{font-family:'JetBrains Mono',monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-size:.8rem}
+  #final .verdict-txt{font-size:1.25rem;font-family:'Fraunces',serif;margin:14px 0}
+  .btn{font-family:'JetBrains Mono',monospace;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);padding:13px 24px;border-radius:8px;cursor:pointer;margin-top:18px;transition:.2s}
+  .btn:hover{background:transparent;color:var(--ink)}
+  .hidden{display:none !important}
+  footer{text-align:center;margin-top:38px;font-size:.82rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Architettura dei Calcolatori · UNIMORE</div>
+    <h1>RISC-V &amp;<br>Instruction Set</h1>
+    <p class="sub">45 domande su ISA, registri, aritmetica, memoria, formati, logica, salti, procedure e segnali di controllo. Ogni distractor è un tranello reale — leggi sempre la spiegazione dopo aver risposto.</p>
+  </header>
+
+  <div class="hud">
+    <div class="hud-inner">
+      <div class="bar"><i id="barfill"></i></div>
+      <span class="score">Punteggio <b id="scoreNow">0</b>/<span id="scoreTot">0</span> · <span id="answered">0</span> risposte</span>
+      <select id="topicSel"><option value="all">Tutti gli argomenti</option></select>
+      <button class="filterbtn" id="toggleCalc">Solo calcoli</button>
+    </div>
+  </div>
+
+  <main id="quiz"></main>
+
+  <section id="final">
+    <div class="lbl">Risultato</div>
+    <div class="big"><span id="finalScore">0</span><span style="font-size:.4em;color:var(--muted)">/<span id="finalTot">0</span></span></div>
+    <div class="verdict-txt" id="finalMsg"></div>
+    <button class="btn" onclick="location.reload()">Ricomincia</button>
+  </section>
+
+  <footer>In bocca al lupo per la laurea ✦</footer>
+</div>
+
+<script>
+const Q=[
+/* ===== ISA/RISC-V ===== */
+{topic:"ISA/RISC-V",q:"Cos'è l'Instruction Set Architecture (ISA)?",
+ opts:[
+  "Il programma del sistema operativo",
+  "La velocità di clock del processore",
+  "Il numero di core della CPU",
+  "L'insieme di tutte le istruzioni che una CPU può eseguire"],
+ correct:3,
+ expl:"L'ISA è l'<b>interfaccia tra hardware e software</b>: definisce le istruzioni disponibili, i registri, i formati. RISC-V, MIPS, x86 e ARM sono famiglie con ISA diverse.",
+ trap:"Il numero di core o la frequenza di clock sono caratteristiche dell'implementazione, non dell'ISA."},
+
+{topic:"ISA/RISC-V",q:"RISC-V è un'architettura:",
+ opts:[
+  "Proprietaria di Intel, usata solo nei server",
+  "Open source, sviluppata a Berkeley nel 2010, simile a MIPS",
+  "Sviluppata da ARM per i dispositivi mobili",
+  "Obsoleta, non più usata nell'industria"],
+ correct:1,
+ expl:"RISC-V è <b>open source</b> (chiunque può implementarla senza licenze), nata a Berkeley nel 2010 e in forte crescita industriale.",
+ trap:"ARM è proprietaria; Intel x86 è proprietaria; RISC-V è invece completamente aperta."},
+
+{topic:"ISA/RISC-V",q:"Il principio « Simplicity favors regularity » in RISC-V si manifesta nel fatto che:",
+ opts:[
+  "Ogni istruzione può avere un numero variabile di operandi",
+  "Le istruzioni aritmetiche operano direttamente sulla memoria",
+  "Tutte le istruzioni aritmetiche hanno sempre tre operandi (due sorgenti, una destinazione)",
+  "Esistono istruzioni speciali a 4 operandi per le moltiplicazioni"],
+ correct:2,
+ expl:"Struttura fissa → hardware semplice e prevedibile. Non ci sono istruzioni con 2 operandi e altre con 4.",
+ trap:"Operandi variabili esistono nell'x86 (CISC), non nel RISC-V."},
+
+/* ===== REGISTRI ===== */
+{topic:"Registri",q:"Quanti registri ha RISC-V (implementazione a 32 bit) e quanto sono larghi?",
+ opts:[
+  "64 registri da 16 bit",
+  "32 registri da 32 bit",
+  "16 registri da 32 bit",
+  "32 registri da 64 bit"],
+ correct:1,
+ expl:"RISC-V ha <b>32 registri</b> (x0-x31) da <b>32 bit</b> ciascuno nell'implementazione RV32.",
+ trap:"32 registri da 64 bit è RV64 (la versione a 64 bit); 16 registri da 32 è MIPS originale."},
+
+{topic:"Registri",q:"Il registro x0 in RISC-V:",
+ opts:[
+  "Contiene il Program Counter",
+  "È il return address",
+  "Contiene lo stack pointer",
+  "Contiene sempre il valore 0 e non può essere modificato"],
+ correct:3,
+ expl:"x0 (zero) è <b>hardwired</b> a 0: qualsiasi scrittura viene ignorata. Utilissimo per negare, azzerare, saltare incondizionatamente.",
+ trap:"x1=ra (return address), x2=sp (stack pointer), il PC è un registro separato non accessibile direttamente."},
+
+{topic:"Registri",q:"I registri x10-x17 (a0-a7) vengono usati per:",
+ opts:[
+  "Conservare i registri temporanei",
+  "Passare parametri alle procedure e ricevere i risultati",
+  "Il return address e lo stack pointer",
+  "Variabili globali"],
+ correct:1,
+ expl:"a0-a7 = <b>argument/return</b> registers: i primi 8 argomenti di una funzione vanno in x10-x17; i valori di ritorno in x10-x11.",
+ trap:"x1 è il return address, x2 lo stack pointer; x5-x7 e x28-x31 sono i temporanei."},
+
+{topic:"Registri",q:"Quali registri vengono chiamati « saved registers » e devono essere preservati dal chiamato?",
+ opts:[
+  "x10-x17 (argomenti)",
+  "x5-x7 e x28-x31 (temporanei)",
+  "x8-x9 e x18-x27 (s0-s11)",
+  "x0-x4"],
+ correct:2,
+ expl:"I saved registers (s0-s11) <b>devono essere ripristinati</b> dal chiamato prima di tornare; se li usa, li salva sullo stack.",
+ trap:"I temporanei (x5-x7, x28-x31) non devono essere preservati: il chiamante li salva se gli servono dopo la chiamata."},
+
+/* ===== ARITMETICA ===== */
+{topic:"Aritmetica",q:"L'istruzione  addi x22, x22, 4  fa:",
+ opts:[
+  "x22 = Memoria[x22 + 4]",
+  "x22 = x22 + 4  (aggiunge la costante 4)",
+  "Equivale a  add x22, x22, 4  (identica)",
+  "Genera un'eccezione se 4 > 0"],
+ correct:1,
+ formula:"addi rd, rs1, imm  →  rd = rs1 + imm\naddi x22, x22, 4   →  <em>x22 = x22 + 4</em>",
+ expl:"addi usa il <b>formato I</b> con un immediato a 12 bit. Non esiste « add immediato » con formato R.",
+ trap:"add x22, x22, 4 NON è sintassi valida: il terzo operando deve essere un registro, non una costante."},
+
+{topic:"Aritmetica",t:"calcul",q:"Come si ottiene  x5 = −x6  usando solo istruzioni RISC-V?",
+ opts:[
+  "addi x5, x6, -1",
+  "not x5, x6",
+  "sub x5, x0, x6",
+  "xori x5, x6, 0xFFFF"],
+ correct:2,
+ formula:"sub rd, rs1, rs2  →  rd = rs1 - rs2\nsub x5, x0, x6   →  x5 = 0 - x6 = <em>-x6</em>",
+ expl:"Sfruttando x0=0: 0−x6 = −x6. Elegante uso del registro zero.",
+ trap:"addi x6, -1 è un decremento (x6−1), non la negazione. RISC-V non ha un'istruzione « not » esplicita."},
+
+{topic:"Aritmetica",q:"La traduzione di  f = (g+h) - (i+j)  in RISC-V (con g→x1, h→x2, i→x3, j→x4, f→x5, temporanei t0=x6, t1=x7) è:",
+ opts:[
+  "add x5,x1,x2 ;  sub x5,x3,x4",
+  "sub x5,x1,x2 ;  add x6,x3,x4 ;  add x5,x5,x6",
+  "lw x5,0(x1)",
+  "add x6,x1,x2 ;  add x7,x3,x4 ;  sub x5,x6,x7"],
+ correct:3,
+ formula:"add x6, x1, x2     # t0 = g+h\nadd x7, x3, x4     # t1 = i+j\nsub x5, x6, x7    # f = t0-t1",
+ expl:"Servono due <b>temporanei</b> per memorizzare i risultati intermedi prima della sottrazione finale.",
+ trap:"add x5,x1,x2 poi sub x5,x3,x4 calcolerebbe h−(i+j), non (g+h)−(i+j) — manca la seconda somma."},
+
+/* ===== MEMORIA ===== */
+{topic:"Memoria",q:"L'istruzione  lw x5, 40(x6)  significa:",
+ opts:[
+  "Memoria[x6 + 40] = x5",
+  "x6 = Memoria[x5 + 40]",
+  "x5 = x6 + 40",
+  "x5 = Memoria[x6 + 40]"],
+ correct:3,
+ formula:"lw rd, offset(rs1)  →  rd = Mem[rs1 + offset]\nlw x5, 40(x6)      →  <em>x5 = Mem[x6 + 40]</em>",
+ expl:"lw = <b>load word</b>: legge dalla memoria all'indirizzo base+offset e lo scrive nel registro destinazione.",
+ trap:"Scambiare sorgente e destinazione (Mem = x5) descrive invece lo store (sw)."},
+
+{topic:"Memoria",q:"L'istruzione  sw x5, 40(x6)  significa:",
+ opts:[
+  "x5 = Memoria[x6 + 40]",
+  "x5 = x6 + 40",
+  "Memoria[x6 + 40] = x5",
+  "x6 = Memoria[x5 + 40]"],
+ correct:2,
+ formula:"sw rs2, offset(rs1)  →  Mem[rs1 + offset] = rs2\nsw x5, 40(x6)       →  <em>Mem[x6 + 40] = x5</em>",
+ expl:"sw = <b>store word</b>: scrive il contenuto del registro in memoria. La sorgente è x5, la destinazione è la memoria.",
+ trap:"Confondere lw con sw è l'errore più comune: lw LEGGE dalla memoria, sw SCRIVE in memoria."},
+
+{topic:"Memoria",t:"calcul",q:"Codice C:  g = h + A[8];  con g→x20, h→x21, base A→x22. Qual è l'offset corretto da usare nel lw?",
+ opts:["8","4","64","32"],
+ correct:3,
+ formula:"A[i] si trova all'indirizzo:  base + i × sizeof(word)\nA[8]:  base + 8 × 4 = base + <em>32</em>",
+ expl:"La memoria è <b>indirizzata a byte</b>; una word (int) occupa 4 byte. L'elemento A[8] è a 32 byte dall'inizio dell'array.",
+ trap:"Usare 8 come offset significa accedere a A[2], non A[8] — errore classico di confusione tra indice e byte offset."},
+
+{topic:"Memoria",q:"RISC-V usa il formato Little Endian. Come viene memorizzato il numero 0x12345678?",
+ opts:[
+  "12 34 56 78  (byte più significativo all'indirizzo più basso)",
+  "12 78 34 56",
+  "34 12 78 56",
+  "78 56 34 12  (byte meno significativo all'indirizzo più basso)"],
+ correct:3,
+ formula:"Little Endian: indirizzo più basso ← byte meno significativo\n0x12345678:  78 | 56 | 34 | 12",
+ expl:"<b>Little Endian</b> = il byte meno significativo (LSB) occupa l'indirizzo più piccolo.",
+ trap:"12 34 56 78 è Big Endian (usato ad es. da MIPS, TCP/IP); RISC-V è invece Little Endian."},
+
+{topic:"Memoria",q:"Perché le istruzioni aritmetiche NON possono operare direttamente sulla memoria?",
+ opts:[
+  "Perché la memoria è troppo grande",
+  "Perché le istruzioni aritmetiche sono di tipo S",
+  "Principio load/store: le operazioni ALU usano solo registri (veloci); la memoria richiede lw/sw separati",
+  "Perché la memoria non ha indirizzo"],
+ correct:2,
+ expl:"Il RISC separa nettamente <b>calcolo</b> (su registri veloci) e <b>accesso dati</b> (load/store). Semplifica la pipeline e rende il codice più regolare.",
+ trap:"Le istruzioni aritmetiche di tipo R/I usano registri, non il formato S (che è per store)."},
+
+/* ===== RAPPRESENTAZIONI ===== */
+{topic:"Numeri",t:"calcul",q:"In complemento a due a 8 bit, +2 = 00000010. Come si rappresenta -2?",
+ opts:[
+  "10000010  (si cambia solo il bit di segno)",
+  "11111101  (solo inversione dei bit, senza +1)",
+  "00000010  (uguale a +2)",
+  "11111110  (inverti tutti i bit, poi aggiungi 1)"],
+ correct:3,
+ formula:"~(00000010) = 11111101\n        + 1 = <em>11111110</em>  →  -2",
+ expl:"Cambio di segno in Ca2: <b>inverti tutti i bit</b> (complemento a uno) e poi <b>aggiungi 1</b>.",
+ trap:"Cambiare solo il bit di segno (10000010) è la rappresentazione « segno-modulo », NON il complemento a due."},
+
+{topic:"Numeri",q:"L'intervallo dei numeri rappresentabili in complemento a due con n bit è:",
+ opts:[
+  "0 ≤ x ≤ 2ⁿ − 1  (unsigned)",
+  "−2ⁿ ≤ x ≤ 2ⁿ",
+  "−2^(n−1) ≤ x ≤ 2^(n−1) − 1",
+  "−2^(n−1) − 1 ≤ x ≤ 2^(n−1)"],
+ correct:2,
+ formula:"Ca2 con n bit:  <em>−2^(n−1)</em>  ≤ x ≤  <em>2^(n−1) − 1</em>\nn=32:  da −2147483648  a  2147483647",
+ expl:"Asimmetrico: c'è un negativo in più perché 0 occupa una posizione « dal lato positivo ».",
+ trap:"0 ≤ x ≤ 2ⁿ−1 è l'intervallo degli unsigned; l'opzione D inverte i segni."},
+
+{topic:"Numeri",q:"La sign extension (estensione del segno) consiste nel:",
+ opts:[
+  "Replicare il bit di segno (MSB) nelle posizioni aggiuntive",
+  "Aggiungere sempre zeri a sinistra (zero extension)",
+  "Invertire i bit per ottenere il complemento",
+  "Troncare i bit più significativi"],
+ correct:0,
+ expl:"Si copia il <b>bit di segno</b> (MSB) nelle posizioni nuove. Es. 11111110 (8 bit, -2) diventa 1111111111111110 (16 bit, ancora -2).",
+ trap:"Aggiungere zeri è la zero extension (per unsigned); per i signed, aggiungere zeri cambierebbe il valore del numero negativo."},
+
+{topic:"Numeri",q:"Differenza tra  lb  e  lbu:",
+ opts:[
+  "lb è per word, lbu è per byte",
+  "lbu è più lento di lb",
+  "lb carica 1 byte con sign extension (signed); lbu con zero extension (unsigned)",
+  "Sono istruzioni identiche"],
+ correct:2,
+ expl:"La <b>u</b> sta per unsigned: lbu replica zeri (zero extension), preservando il valore come numero positivo. lb replica il bit di segno.",
+ trap:"Sono entrambe istruzioni da 1 byte; la differenza è solo nell'estensione a 32 bit."},
+
+/* ===== FORMATI ===== */
+{topic:"Formati",q:"Il formato R è usato per:",
+ opts:[
+  "Operazioni con immediato (addi, lw)",
+  "Store",
+  "Salti condizionati",
+  "Operazioni tra registri (add, sub, and, or, sll...)"],
+ correct:3,
+ formula:"R:  funct7 | rs2 | rs1 | funct3 | rd | opcode",
+ expl:"Formato R = tre campi registro (rs1, rs2, rd) + codici funzione. Usato per tutte le operazioni registro-registro.",
+ trap:"addi usa il formato I; store usa S; branch usa SB (o B)."},
+
+{topic:"Formati",q:"Il formato I ha un campo immediato di:",
+ opts:["5 bit","20 bit","32 bit","12 bit"],
+ correct:3,
+ formula:"I:  imm[11:0] | rs1 | funct3 | rd | opcode\nRange immediato: da −2048 a +2047",
+ expl:"12 bit con segno → range ±2048. Usato in addi, lw, jalr...",
+ trap:"20 bit è l'immediato del formato U (lui, auipc), non del formato I."},
+
+{topic:"Formati",q:"Nel formato S (store), l'offset è diviso in due parti perché:",
+ opts:[
+  "Per supportare offset maggiori di 4096",
+  "Per risparmiare bit",
+  "La codifica mantiene rs1 e rs2 SEMPRE nelle stesse posizioni bit, semplificando la decodifica",
+  "Il processore richiede offset pari"],
+ correct:2,
+ expl:"Design RISC-V: rs1 e rs2 occupano <b>sempre le stesse posizioni</b> in tutti i formati → il decoder può leggere i registri in parallelo alla decodifica.",
+ trap:"La divisione non aumenta né riduce il range dell'offset (sempre 12 bit totali = ±2048)."},
+
+{topic:"Formati",q:"Nel formato SB (branch), l'indirizzo di salto si calcola come:",
+ opts:[
+  "Valore assoluto dell'immediato",
+  "x1 + offset",
+  "PC + offset × 4",
+  "PC + offset  (offset sign-extended, shiftato a sinistra di 1)"],
+ correct:3,
+ formula:"target = PC + sign_ext(imm) << 1",
+ expl:"Il salto è <b>relativo al PC</b>. L'offset è in multipli di 2 byte (tutte le istruzioni RISC-V sono almeno 2-byte allineate), quindi si shifta di 1.",
+ trap:"× 4 sarebbe per istruzioni da 32 bit allineate; RISC-V supporta estensioni compresse (16 bit) quindi usa × 2."},
+
+/* ===== LOGICA / SHIFT ===== */
+{topic:"Logica",t:"calcul",q:"L'istruzione  slli x5, x5, 3  produce:",
+ opts:[
+  "x5 = x5 / 8",
+  "x5 = x5 + 3",
+  "x5 = x5 × 8",
+  "x5 = x5 × 3"],
+ correct:2,
+ formula:"slli rd, rs1, i  →  rd = rs1 << i  =  rs1 × 2^i\nslli x5, x5, 3    →  x5 = x5 × <em>2³ = ×8</em>",
+ expl:"Shift left di i bit equivale a moltiplicare per 2ⁱ (per i numeri senza segno e per i signed senza overflow).",
+ trap:"×3 confonde lo shift con la moltiplicazione per il valore dell'immediato; /8 sarebbe srli."},
+
+{topic:"Logica",q:"L'operazione XOR con la maschera 0xFFFFFFFF (tutti 1) su un registro produce:",
+ opts:[
+  "Il registro invariato",
+  "Azzeramento del registro",
+  "OR con tutti i bit",
+  "Il NOT logico del registro (tutti i bit vengono complementati)"],
+ correct:3,
+ expl:"XOR con 1 = flip del bit; XOR con 0 = nessun cambiamento. Quindi XOR con tutti 1 = <b>NOT</b> bit a bit.",
+ trap:"Invariato sarebbe XOR con tutti 0; azzeramento sarebbe AND con 0."},
+
+{topic:"Logica",q:"L'operazione AND è utile per:",
+ opts:[
+  "Impostare specifici bit a 1",
+  "Restituire 1 se i bit sono diversi",
+  "Mascherare i bit: mantiene solo quelli dove la maschera è 1, azzera gli altri",
+  "Shiftare i bit a sinistra"],
+ correct:2,
+ expl:"AND = <b>maschera selettiva</b>. Es. AND con 0x0000FFFF isola i 16 bit meno significativi.",
+ trap:"Impostare bit a 1 si fa con OR (non AND); bit diversi è XOR."},
+
+{topic:"Logica",q:"L'operazione OR è utile per:",
+ opts:[
+  "Azzerare specifici bit",
+  "Mascherare i bit",
+  "Impostare specifici bit a 1 (dove la maschera è 1)",
+  "Verificare l'uguaglianza"],
+ correct:2,
+ expl:"OR con 1 = forza il bit a 1; OR con 0 = lascia invariato. Utile per impostare flag o bit di configurazione.",
+ trap:"Azzerare bit si fa con AND (con maschera invertita); mascherare usa AND."},
+
+/* ===== SALTI ===== */
+{topic:"Salti",q:"L'istruzione  beq x1, x2, L1  fa:",
+ opts:[
+  "Salta sempre a L1",
+  "Salta a L1 se x1 ≠ x2",
+  "Salta a L1 se x1 < x2",
+  "Salta a L1 se x1 == x2; altrimenti PC = PC + 4"],
+ correct:3,
+ expl:"beq = <b>branch if equal</b>. L'ALU calcola x1−x2; se il risultato è 0, il flag Zero è 1 e si salta.",
+ trap:"« salta se diversi » è bne; « salta se minore » è blt."},
+
+{topic:"Salti",q:"Cosa calcola l'ALU durante l'esecuzione di  beq x1, x2, label?",
+ opts:[
+  "La somma x1 + x2",
+  "Il prodotto x1 × x2",
+  "L'indirizzo x1 + offset",
+  "La differenza x1 − x2; se il risultato è 0, il segnale Zero=1 e il PC salta"],
+ correct:3,
+ expl:"Per verificare l'uguaglianza si usa la <b>sottrazione</b>: x1−x2=0 ↔ x1=x2 → Zero=1 → salto.",
+ trap:"Sommare i due registri non permetterebbe di rilevare l'uguaglianza (0+0=0, ma anche -3+3=0)."},
+
+{topic:"Salti",q:"Differenza tra  blt  e  bltu:",
+ opts:[
+  "bltu salta sempre",
+  "bltu non ha offset",
+  "Sono identiche",
+  "blt tratta gli operandi come signed (Ca2); bltu come unsigned"],
+ correct:3,
+ formula:"0xFFFFFFFF:  blt  lo vede come -1 (negativo)\n             bltu lo vede come 4294967295 (grande positivo)",
+ expl:"Con Ca2 il bit più significativo indica il segno. Un numero come 0x80000000 è negativo per blt ma enorme per bltu.",
+ trap:"La distinzione signed/unsigned è fondamentale nei confronti: lo stesso pattern di bit ha valori diversi."},
+
+{topic:"Salti",q:"Traduzione RISC-V di:  if(i==j) f=g+h; else f=g-h;",
+ opts:[
+  "beq x22,x23,Else ; sub x19,x20,x21 ; beq x0,x0,Exit ; Else: add x19,x20,x21 ; Exit:",
+  "beq x22,x23,Exit ; add x19,x20,x21",
+  "bne x22,x23,Exit ; add x19,x20,x21 ; sub x19,x20,x21",
+  "bne x22,x23,Else ; add x19,x20,x21 ; beq x0,x0,Exit ; Else: sub x19,x20,x21 ; Exit:"],
+ correct:3,
+ formula:"bne x22,x23,Else   # salta all'else se i≠j\nadd x19,x20,x21    # f = g+h  (then)\nbeq x0,x0,Exit     # salta oltre l'else\nElse: sub x19,x20,x21\nExit:",
+ expl:"Si usa <b>bne</b> per saltare al ramo else (condizione negata), poi beq x0,x0 come salto incondizionato oltre l'else.",
+ trap:"beq x22,x23,Else salterebbe all'else quando i==j (esattamente l'opposto di ciò che serve)."},
+
+/* ===== PROCEDURE / STACK ===== */
+{topic:"Procedure",q:"L'istruzione  jal x1, funzione  fa:",
+ opts:[
+  "Salta a x1 e salva il PC in funzione",
+  "Torna al chiamante leggendo l'indirizzo da x1",
+  "Carica il valore di funzione nel registro x1",
+  "Salta a funzione e salva PC+4 in x1 (return address)"],
+ correct:3,
+ formula:"jal rd, label  →  rd = PC + 4 ;  PC = label\njal x1, func   →  <em>x1 = PC+4 ;  salta a func</em>",
+ expl:"jal = Jump And Link: <b>salva l'indirizzo di ritorno</b> (PC+4 = istruzione successiva) nel registro rd.",
+ trap:"Tornare al chiamante si fa con jalr x0,0(x1), non con jal."},
+
+{topic:"Procedure",q:"L'istruzione  jalr x0, 0(x1)  fa:",
+ opts:[
+  "Salta a x0",
+  "Carica 0 in x1",
+  "Incrementa x1 di 4",
+  "Salta all'indirizzo contenuto in x1, salvando PC+4 in x0 (cioè lo scarta)"],
+ correct:3,
+ expl:"jalr = Jump And Link Register. Usato per il <b>ritorno</b> dalla procedura: x1 contiene il return address salvato da jal. x0 scarta il PC+4.",
+ trap:"jalr salta INDIRETTO (a un indirizzo in un registro), non a x0 stesso."},
+
+{topic:"Procedure",q:"Lo stack in RISC-V cresce verso:",
+ opts:[
+  "Indirizzi pari",
+  "Indirizzi più alti (si incrementa sp)",
+  "Indirizzi casuali",
+  "Indirizzi più bassi (si decrementa sp)"],
+ correct:3,
+ formula:"push:  addi x2, x2, -4  ;  sw reg, 0(x2)\npop:   lw reg, 0(x2)  ;  addi x2, x2, +4",
+ expl:"Lo stack cresce verso il <b>basso</b> (indirizzi decrescenti). Per fare push si decrementa sp di 4 prima di scrivere.",
+ trap:"Intuitivamente « crescere » evoca indirizzi alti, ma per gli stack è convenzionalmente il contrario."},
+
+{topic:"Procedure",q:"Perché la ricorsione richiede lo stack?",
+ opts:[
+  "Perché la ricorsione è più lenta senza stack",
+  "Perché x0 non è sufficiente",
+  "I registri sono sufficienti, lo stack non serve",
+  "Ogni chiamata ricorsiva deve salvare il proprio stato (return address, variabili locali) per recuperarlo al ritorno"],
+ correct:3,
+ expl:"Ogni livello ricorsivo ha il proprio <b>frame di attivazione</b> con il suo return address e parametri. I registri sono condivisi: senza stack si sovrascriverebbero.",
+ trap:"I registri sono in numero fisso (32): con ricorsioni profonde non basterebbero, tutto va nello stack."},
+
+{topic:"Procedure",q:"Il frame pointer x8 (fp) serve a:",
+ opts:[
+  "Puntare alla cima dello stack",
+  "Conservare il return address",
+  "Accedere alle variabili globali",
+  "Puntare all'inizio del frame di attivazione; utile quando sp cambia durante l'esecuzione"],
+ correct:3,
+ expl:"fp è un riferimento fisso all'inizio del frame corrente. sp può variare (push/pop locali); fp garantisce un punto di ancoraggio stabile.",
+ trap:"sp punta alla cima (top) dello stack, fp punta alla base del frame corrente."},
+
+{topic:"Procedure",q:"Differenza tra heap e stack:",
+ opts:[
+  "Sono la stessa area di memoria",
+  "L'heap è per le procedure (LIFO); lo stack è per malloc/free",
+  "Lo stack è per allocazione dinamica (malloc/free); l'heap per i frame di procedura (LIFO)",
+  "Lo stack contiene frame di procedura (LIFO, automatico); l'heap è per allocazione dinamica (malloc/free)"],
+ correct:3,
+ expl:"Stack = LIFO, gestito dal compilatore. Heap = area libera, gestita dal programmatore con malloc/free (C) o new/delete (C++).",
+ trap:"Le opzioni B e C invertono le due definizioni — tranello classico."},
+
+/* ===== CONTROLLO ===== */
+{topic:"Controllo",q:"Il segnale di controllo ALUSrc seleziona:",
+ opts:[
+  "Se scrivere il risultato nel registro destinazione",
+  "Se leggere o scrivere la memoria",
+  "Se saltare o no",
+  "Se il secondo operando dell'ALU è un registro (rs2) o un immediato sign-extended"],
+ correct:3,
+ expl:"ALUSrc=0 → usa il registro rs2 (formato R). ALUSrc=1 → usa l'immediato (formato I).",
+ trap:"RegWrite abilita la scrittura del registro; MemRead/Write gestisce la memoria; Branch gestisce il salto."},
+
+{topic:"Controllo",q:"Il segnale MemToReg seleziona:",
+ opts:[
+  "Se abilitare la lettura dalla memoria",
+  "Se abilitare la scrittura in memoria",
+  "La operazione da eseguire nella ALU",
+  "Se scrivere nel registro destinazione il risultato ALU (0) o il dato letto dalla memoria (1)"],
+ correct:3,
+ expl:"Usato dopo una load: MemToReg=1 → il dato di memoria va nel registro; MemToReg=0 → il risultato dell'ALU va nel registro.",
+ trap:"MemToReg non abilita la lettura della memoria (quello è MemRead); abilita quale dato scrivere nel registro."},
+
+{topic:"Controllo",q:"Cosa fa il segnale RegWrite?",
+ opts:[
+  "Legge un valore da un registro",
+  "Seleziona quale ALU usare",
+  "Abilita la scrittura del risultato nel registro destinazione (rd)",
+  "Abilita l'accesso alla memoria"],
+ correct:2,
+ expl:"RegWrite=1 → il valore calcolato viene scritto nel registro rd. Per le store, RegWrite=0 (non si scrive nel register file).",
+ trap:"La lettura dei registri non è condizionata da un segnale di controllo — avviene sempre (la scrittura invece è controllata)."},
+
+{topic:"Controllo",q:"Il segnale ALUOp comunica alla ALU:",
+ opts:[
+  "Il valore dell'immediato",
+  "L'indirizzo di memoria",
+  "La famiglia di operazioni da eseguire; il control ALU usa poi funct3/funct7 per l'operazione esatta",
+  "Il numero del registro destinazione"],
+ correct:2,
+ expl:"ALUOp è un codice di « categoria »: es. ALUOp=00 → add (per lw/sw), ALUOp=01 → sub (per beq), ALUOp=10 → usa funct3/funct7 (per istruzioni R/I).",
+ trap:"ALUOp non porta il valore dell'immediato né l'indirizzo: quelli arrivano da altri percorsi del datapath."},
+
+{topic:"Controllo",q:"Durante l'esecuzione di una load (lw), quali segnali di controllo sono attivi?",
+ opts:[
+  "MemWrite=1, RegWrite=0, ALUSrc=0",
+  "MemRead=1, RegWrite=1, ALUSrc=1, MemToReg=1",
+  "Branch=1, MemRead=1, RegWrite=0",
+  "ALUSrc=1, MemWrite=1, MemToReg=0"],
+ correct:1,
+ formula:"lw x5, 40(x6):\nALUSrc=1  (usa immediato 40, non rs2)\nMemRead=1 (legge dalla memoria)\nRegWrite=1 (scrive x5)\nMemToReg=1 (scrivi il dato di memoria, non risultato ALU)",
+ expl:"lw calcola l'indirizzo con l'ALU (immediate → ALUSrc=1), legge la memoria (MemRead=1), scrive il dato nel registro (RegWrite=1, MemToReg=1).",
+ trap:"MemWrite deve essere 0 (si legge, non si scrive in memoria). Branch=0 (nessun salto)."},
+
+{topic:"Controllo",q:"Quali segnali di controllo sono attivi per un'istruzione  add  di tipo R?",
+ opts:[
+  "MemRead=1, MemToReg=1, ALUSrc=1",
+  "ALUSrc=0, RegWrite=1, MemRead=0, MemWrite=0, MemToReg=0",
+  "Branch=1, RegWrite=1",
+  "ALUSrc=1, MemWrite=1"],
+ correct:1,
+ formula:"add x1, x2, x3:\nALUSrc=0   (usa rs2=x3, non immediato)\nRegWrite=1  (scrive x1)\nMemRead=0  (no accesso memoria)\nMemWrite=0 (no scrittura memoria)\nMemToReg=0 (scrivi risultato ALU, non memoria)",
+ expl:"Istruzione puramente tra registri: tutto il percorso usa il register file e l'ALU, senza toccare la memoria.",
+ trap:"ALUSrc=1 sarebbe per addi (immediato); MemToReg=1 servirebbe per lw (dato di memoria)."},
+
+/* ===== BASI ISA extra ===== */
+{topic:"ISA/RISC-V",q:"Una « word » in RISC-V (architettura a 32 bit) corrisponde a:",
+ opts:[
+  "8 byte (64 bit)",
+  "1 byte (8 bit)",
+  "2 byte (16 bit, half-word)",
+  "4 byte (32 bit)"],
+ correct:3,
+ expl:"word = 32 bit = 4 byte. Half-word = 16 bit. Double word = 64 bit. Fondamentale per calcolare gli offset negli array.",
+ trap:"2 byte è una half-word; 8 byte è una double word (usata in RV64)."},
+
+{topic:"Registri",q:"Il registro x8 ha un ruolo duplice: è sia frame pointer (fp) sia:",
+ opts:[
+  "Return address",
+  "Stack pointer",
+  "Il secondo saved register (s0)",
+  "Primo registro temporaneo"],
+ correct:2,
+ expl:"x8 = fp/s0: se la procedura non usa il frame pointer, x8 funge da saved register (s0) e deve essere preservato.",
+ trap:"x1=ra, x2=sp, x5-x7=temporanei."},
+
+{topic:"Aritmetica",q:"Il principio « Smaller is faster » giustifica il fatto che RISC-V abbia solo 32 registri perché:",
+ opts:[
+  "Più registri rendono il codice impossibile da compilare",
+  "32 registri bastano per qualsiasi programma",
+  "Con pochi registri l'indirizzamento usa solo 5 bit e il register file è piccolo/veloce",
+  "I chip con meno registri costano meno"],
+ correct:2,
+ formula:"32 registri → 5 bit per indirizzare un registro\n(log₂32 = 5)",
+ expl:"5 bit per campo registro → formato compatto. Register file piccolo → lettura/scrittura rapida → clock breve.",
+ trap:"128 registri richiederebbero 7 bit per campo, formati più larghi e hardware più lento."}
+];
+
+/* ---------- Build ---------- */
+const quiz=document.getElementById('quiz');
+const L=['A','B','C','D'];
+let answered=0,score=0;
+document.getElementById('scoreTot').textContent=Q.length;
+document.getElementById('finalTot').textContent=Q.length;
+
+const topics=[...new Set(Q.map(q=>q.topic))];
+const sel=document.getElementById('topicSel');
+topics.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;sel.appendChild(o);});
+
+Q.forEach((item,i)=>{
+  const card=document.createElement('article');
+  card.className='card';
+  card.dataset.topic=item.topic;
+  card.dataset.calc=item.t==='calcul'?'1':'0';
+  const tClass=item.t==='calcul'?'calcul':'concept';
+  const codeHtml=item.code?`<pre class="code">${item.code}</pre>`:'';
+  const optsHtml=item.opts.map((o,j)=>`<li class="opt" data-i="${j}"><span class="lt">${L[j]}</span><span class="ot">${o}</span><span class="mark"></span></li>`).join('');
+  const fHtml=item.formula?`<div class="formula">${item.formula}</div>`:'';
+  const trapHtml=item.trap?`<div class="trap">${item.trap}</div>`:'';
+  card.innerHTML=`
+    <div class="qtop">
+      <span class="qnum">${String(i+1).padStart(2,'0')}</span>
+      <span class="qtopic" data-t="${tClass}">${item.topic}</span>
+    </div>
+    <p class="qtext">${item.q}</p>${codeHtml}
+    <ul class="opts">${optsHtml}</ul>
+    <div class="expl"><span class="verdict"></span>${fHtml}<p>${item.expl}</p>${trapHtml}</div>`;
+  const opts=card.querySelectorAll('.opt');
+  const expl=card.querySelector('.expl');
+  const verdict=card.querySelector('.verdict');
+  opts.forEach(opt=>{
+    opt.addEventListener('click',()=>{
+      if(card.dataset.done)return;
+      card.dataset.done='1';
+      const chosen=+opt.dataset.i, right=item.correct;
+      opts.forEach(o=>{
+        o.classList.add('locked');
+        const idx=+o.dataset.i;
+        if(idx===right){o.classList.add('correct');o.querySelector('.mark').textContent='✓ giusta';}
+        if(idx===chosen&&chosen!==right){o.classList.add('wrong');o.querySelector('.mark').textContent='✗ la tua';}
+      });
+      if(chosen===right){verdict.textContent='✓ Risposta corretta';verdict.className='verdict ok';card.classList.add('done');score++;}
+      else{verdict.textContent='✗ Sbagliata — risposta giusta: '+L[right];verdict.className='verdict no';card.classList.add('failed');}
+      expl.classList.add('show');answered++;updateHud();
+    });
+  });
+  quiz.appendChild(card);
+});
+
+function updateHud(){
+  document.getElementById('scoreNow').textContent=score;
+  document.getElementById('answered').textContent=answered;
+  document.getElementById('barfill').style.width=(answered/Q.length*100)+'%';
+  if(answered===Q.length)showFinal();
+}
+function showFinal(){
+  const f=document.getElementById('final');
+  document.getElementById('finalScore').textContent=score;
+  const pct=score/Q.length;
+  let m;
+  if(pct===1)m="Perfetto. Tutti i tranelli sventati ✦";
+  else if(pct>=.85)m="Ottimo — ripassa solo i segnali di controllo e i formati.";
+  else if(pct>=.7)m="Solido. Attenzione a lw↔sw, signed↔unsigned e ai segnali di controllo.";
+  else if(pct>=.5)m="Discreto: rileggi ogni spiegazione, i tranelli sono descritti lì.";
+  else m="Da riprendere: parti dai registri e dai formati R/I/S, poi i segnali di controllo.";
+  document.getElementById('finalMsg').textContent=m;
+  f.classList.add('show');f.scrollIntoView({behavior:'smooth'});
+}
+
+sel.addEventListener('change',()=>applyFilter());
+let calcOnly=false;
+document.getElementById('toggleCalc').addEventListener('click',e=>{
+  calcOnly=!calcOnly;
+  e.target.textContent=calcOnly?'Tutte le domande':'Solo calcoli';
+  applyFilter();
+});
+function applyFilter(){
+  const t=sel.value;
+  document.querySelectorAll('.card').forEach(c=>{
+    const okT=(t==='all'||c.dataset.topic===t);
+    const okC=(!calcOnly||c.dataset.calc==='1');
+    c.classList.toggle('hidden',!(okT&&okC));
+  });
+}
+</script>
+</body>
+</html>

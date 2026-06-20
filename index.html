@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="it">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Quiz Architettura</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #0f1117;
+                color: #e2e8f0;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 2rem;
+            }
+
+            .container {
+                max-width: 600px;
+                width: 100%;
+            }
+
+            h1 {
+                font-size: 1.6rem;
+                font-weight: 700;
+                text-align: center;
+                margin-bottom: 2rem;
+                color: #93c5fd;
+            }
+
+            h2 {
+                font-size: 1.1rem;
+                font-weight: 600;
+                text-align: center;
+                margin: 2rem 0 1rem;
+                color: #fbbf24;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+            }
+
+            .quiz-list {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .quiz-list a {
+                display: block;
+                padding: 1rem 1.25rem;
+                background: #1e2130;
+                border: 1px solid #2d3148;
+                border-radius: 10px;
+                color: #e2e8f0;
+                text-decoration: none;
+                font-size: 0.95rem;
+                transition: background 0.2s, border-color 0.2s, transform 0.1s;
+            }
+
+            .quiz-list a:hover {
+                background: #252840;
+                border-color: #60a5fa;
+                transform: translateX(4px);
+                color: #93c5fd;
+            }
+
+            .exam-list a {
+                border-color: #78350f;
+                background: #1c1608;
+            }
+
+            .exam-list a:hover {
+                background: #27200c;
+                border-color: #fbbf24;
+                color: #fde68a;
+            }
+
+            .divider {
+                border: none;
+                border-top: 1px solid #2d3148;
+                margin: 1.5rem 0 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Scegli il quiz che vuoi svolgere</h1>
+
+            <div class="quiz-list">
+                <a href="quiz_parallelismo.html">Quiz — Parallelismo</a>
+                <a href="quiz_pipeline.html">Quiz — Pipeline</a>
+                <a href="quiz_reti_sequenziali.html">Quiz — Reti Sequenziali</a>
+                <a href="quiz_riscv_isa.html">Quiz — RISC-V ISA</a>
+            </div>
+
+            <hr class="divider">
+            <h2>Modello d'Esame</h2>
+
+            <div class="quiz-list exam-list">
+                <a href="quiz_architettura.html">Architettura — Modello 1</a>
+                <a href="quiz_architettura_hard.html">Architettura — Modello 2 (Difficile)</a>
+            </div>
+        </div>
+    </body>
+</html>

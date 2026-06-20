@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz HARD · Architettura dei Calcolatori</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Spectral:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c1a17; --paper:#f4efe6; --paper2:#ece4d6; --line:#cdbfa6;
+    --accent:#8a2b1f; --accent2:#1f5d4c; --gold:#b8860b;
+    --good:#1f5d4c; --bad:#a3302a; --muted:#6e655a;
+    --shadow:0 18px 40px -22px rgba(28,26,23,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Spectral',Georgia,serif;color:var(--ink);line-height:1.55;padding:0 0 80px;
+    background:
+      radial-gradient(circle at 20% -10%, rgba(184,134,11,.10), transparent 45%),
+      radial-gradient(circle at 100% 0%, rgba(31,93,76,.08), transparent 40%),
+      var(--paper);
+    background-attachment:fixed;
+  }
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(rgba(28,26,23,.035) 1px, transparent 1px);background-size:4px 4px;mix-blend-mode:multiply;}
+  .wrap{max-width:830px;margin:0 auto;padding:0 22px;position:relative;z-index:1}
+
+  header{padding:54px 0 24px;border-bottom:2px solid var(--ink);margin-bottom:24px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(2.1rem,6vw,3.4rem);line-height:.98;margin:.18em 0 .15em;letter-spacing:-.01em}
+  h1 .lvl{color:var(--accent);-webkit-text-stroke:0;display:inline-block;transform:rotate(-3deg);font-style:italic}
+  .sub{font-size:1.02rem;color:var(--muted);max-width:64ch}
+
+  .hud{position:sticky;top:0;z-index:20;background:linear-gradient(var(--paper),var(--paper) 72%, rgba(244,239,230,0));padding:12px 0 16px;margin-bottom:6px}
+  .hud-inner{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .bar{flex:1;min-width:140px;height:8px;border:1px solid var(--ink);border-radius:20px;overflow:hidden;background:rgba(255,255,255,.5)}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--gold));transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .score{font-family:'JetBrains Mono',monospace;font-size:.82rem;font-weight:700;white-space:nowrap}
+  .score b{color:var(--accent2)}
+  select,.filterbtn{font-family:'JetBrains Mono',monospace;font-size:.72rem;border:1px solid var(--ink);background:rgba(255,255,255,.6);padding:7px 10px;border-radius:8px;cursor:pointer;color:var(--ink)}
+  .filterbtn:hover{background:var(--ink);color:var(--paper)}
+
+  .card{background:linear-gradient(180deg,#fffdf8,#fbf6ec);border:1.5px solid var(--ink);border-radius:4px;box-shadow:var(--shadow);padding:24px 24px 22px;margin:22px 0;position:relative;scroll-margin-top:88px}
+  .card::before{content:"";position:absolute;left:-1.5px;top:18px;bottom:18px;width:5px;background:var(--accent);border-radius:4px 0 0 4px}
+  .card.done::before{background:var(--good)}
+  .card.failed::before{background:var(--bad)}
+  .qtop{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:4px}
+  .qnum{font-family:'Fraunces',serif;font-weight:900;font-size:1.5rem;color:var(--accent);line-height:1}
+  .qtopic{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--accent2);padding:4px 9px;border-radius:20px;white-space:nowrap;align-self:flex-start}
+  .qtopic[data-t="calcul"]{background:var(--gold)}
+  .qtext{font-size:1.1rem;font-weight:500;margin:6px 0 2px}
+  pre.code{font-family:'JetBrains Mono',monospace;font-size:.84rem;line-height:1.5;background:#211f1b;color:#f4efe6;border-radius:8px;padding:13px 15px;margin:11px 0;overflow-x:auto;border-left:4px solid var(--gold)}
+
+  .opts{list-style:none;margin:14px 0 0;display:flex;flex-direction:column;gap:9px}
+  .opt{display:flex;gap:12px;align-items:flex-start;border:1.4px solid var(--line);border-radius:10px;padding:11px 13px;cursor:pointer;background:rgba(255,255,255,.55);transition:transform .12s,border-color .15s,background .15s;font-size:.97rem}
+  .opt:hover{border-color:var(--ink);transform:translateX(3px)}
+  .opt .lt{font-family:'JetBrains Mono',monospace;font-weight:700;border:1.4px solid var(--ink);border-radius:6px;width:26px;height:26px;display:grid;place-items:center;flex:none;font-size:.82rem;transition:.15s}
+  .opt.correct{border-color:var(--good);background:rgba(31,93,76,.13)}
+  .opt.correct .lt{background:var(--good);color:#fff;border-color:var(--good)}
+  .opt.wrong{border-color:var(--bad);background:rgba(163,48,42,.10)}
+  .opt.wrong .lt{background:var(--bad);color:#fff;border-color:var(--bad)}
+  .opt.locked{cursor:default}.opt.locked:hover{transform:none}
+  .opt .mark{margin-left:auto;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.74rem;opacity:0;align-self:center;white-space:nowrap}
+  .opt.correct .mark{opacity:1;color:var(--good)}.opt.wrong .mark{opacity:1;color:var(--bad)}
+
+  .expl{margin-top:15px;border-top:1.5px dashed var(--line);padding-top:14px;font-size:.96rem;opacity:0;max-height:0;overflow:hidden;transition:opacity .4s,max-height .5s}
+  .expl.show{opacity:1;max-height:1800px}
+  .expl .verdict{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;display:inline-block;margin-bottom:8px;padding:3px 10px;border-radius:20px}
+  .expl .verdict.ok{background:rgba(31,93,76,.15);color:var(--good)}
+  .expl .verdict.no{background:rgba(163,48,42,.13);color:var(--bad)}
+  .expl p{margin:6px 0}.expl b{color:var(--accent)}
+  .formula{font-family:'JetBrains Mono',monospace;font-size:.85rem;line-height:1.6;background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent2);border-radius:8px;padding:11px 13px;margin:10px 0;overflow-x:auto;white-space:pre-wrap}
+  .formula em{color:var(--accent);font-style:normal;font-weight:700}
+  .trap{background:rgba(163,48,42,.08);border:1px solid var(--bad);border-radius:8px;padding:9px 12px;margin:10px 0;font-size:.9rem}
+  .trap::before{content:"⚑ Le piège : ";font-weight:700;color:var(--bad);font-family:'JetBrains Mono',monospace;font-size:.78rem}
+
+  #final{display:none;text-align:center;padding:46px 28px;margin-top:26px}
+  #final.show{display:block;animation:fade .6s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  #final .big{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(3rem,14vw,6rem);line-height:1;color:var(--accent)}
+  #final .lbl{font-family:'JetBrains Mono',monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-size:.8rem}
+  #final .verdict-txt{font-size:1.25rem;font-family:'Fraunces',serif;margin:14px 0}
+  .btn{font-family:'JetBrains Mono',monospace;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);padding:13px 24px;border-radius:8px;cursor:pointer;margin-top:18px;transition:.2s}
+  .btn:hover{background:transparent;color:var(--ink)}
+  .hidden{display:none !important}
+  footer{text-align:center;margin-top:38px;font-size:.82rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Esame Scritto · modalità <span style="color:var(--bad)">difficile</span></div>
+    <h1>Architettura<br>dei Calcolatori <span class="lvl">hard</span></h1>
+    <p class="sub">50 questions, distracteurs piégés : chaque mauvaise réponse ressemble à une vraie (définition voisine, confusion classique, valeur calculée à partir de la mauvaise formule). À toi de débusquer la bonne — explication détaillée après chaque clic.</p>
+  </header>
+
+  <div class="hud">
+    <div class="hud-inner">
+      <div class="bar"><i id="barfill"></i></div>
+      <span class="score">Score <b id="scoreNow">0</b>/<span id="scoreTot">0</span> · <span id="answered">0</span> rép.</span>
+      <select id="topicSel"><option value="all">Tous les thèmes</option></select>
+      <button class="filterbtn" id="toggleCalc">Calculs seuls</button>
+    </div>
+  </div>
+
+  <main id="quiz"></main>
+
+  <section id="final">
+    <div class="lbl">Résultat</div>
+    <div class="big"><span id="finalScore">0</span><span style="font-size:.4em;color:var(--muted)">/<span id="finalTot">0</span></span></div>
+    <div class="verdict-txt" id="finalMsg"></div>
+    <button class="btn" onclick="location.reload()">Recommencer</button>
+  </section>
+
+  <footer>Distracteurs écrits à la main · bonne chasse aux pièges ✦</footer>
+</div>
+
+<script>
+const Q = [
+/* ===== INTRODUZIONE ===== */
+{topic:"Introduzione",q:"I sistemi general-purpose sono:",
+ opts:[
+  "Sistemi digitali la cui funzione è specializzata dal software",
+  "Sistemi digitali la cui funzione è fissata dall'hardware in fabbrica",
+  "Calcolatori progettati per un'unica applicazione specifica",
+  "Sistemi analogici riconfigurabili tramite firmware"],
+ correct:0,
+ expl:"Le même matériel exécute n'importe quel programme : c'est le <b>logiciel</b> qui spécialise la fonction.",
+ trap:"« fissata dall'hardware » et « unica applicazione » décrivent au contraire un <b>ASIC / système embarqué</b>."},
+
+{topic:"Introduzione",q:"I sistemi embedded sono:",
+ opts:[
+  "Calcolatori general-purpose dotati di sistema operativo completo",
+  "Calcolatori ad uso specifico, integrati in un dispositivo più grande",
+  "Sistemi privi di CPU che usano solo logica combinatoria",
+  "Server ad alte prestazioni per il calcolo distribuito"],
+ correct:1,
+ expl:"Embedded = <b>uso specifico</b>, embarqué dans un appareil (voiture, électroménager…), souvent contraint en ressources.",
+ trap:"« general-purpose + SO completo » est exactement l'opposé d'un embedded."},
+
+{topic:"Introduzione",q:"Differenza tra segnale analogico e digitale:",
+ opts:[
+  "L'analogico è immune al rumore, il digitale no",
+  "Il digitale assume infiniti valori, l'analogico solo due",
+  "L'analogico assume infiniti valori nell'intervallo, il digitale un numero finito (discreto)",
+  "L'analogico è sempre più veloce del digitale"],
+ correct:2,
+ expl:"Analogique = <b>continu</b> (infinité de valeurs). Numérique = <b>discret</b> (nombre fini de niveaux, typiquement 2).",
+ trap:"L'option B inverse les deux, et A/D sont des idées reçues fausses (c'est plutôt le numérique qui résiste au bruit)."},
+
+{topic:"Introduzione",q:"L'architettura di Harvard prevede:",
+ opts:[
+  "Un'unica memoria condivisa per dati e istruzioni",
+  "Memorie (e bus) separate per dati e istruzioni",
+  "Nessuna memoria cache tra CPU e RAM",
+  "Esecuzione esclusivamente sequenziale"],
+ correct:1,
+ expl:"Harvard = mémoires <b>et bus séparés</b> données/instructions → lecture d'une instruction et d'une donnée en parallèle.",
+ trap:"La mémoire unique partagée, c'est <b>von Neumann</b> (option A)."},
+
+{topic:"Introduzione",q:"Che differenza c'è tra l'architettura di Von Neumann e quella di Harvard?",
+ opts:[
+  "Harvard non possiede unità di controllo",
+  "Von Neumann non può eseguire programmi memorizzati",
+  "Von Neumann usa un'unica memoria/bus condiviso, Harvard ne ha due separati (dati e istruzioni)",
+  "Harvard è un'architettura puramente analogica"],
+ correct:2,
+ expl:"Différence clé : <b>bus/mémoire unique</b> (VN, d'où le « goulot de von Neumann ») contre <b>deux bus séparés</b> (Harvard, double bande passante).",
+ trap:"Les autres options inventent des limitations qui n'existent pas — VN exécute évidemment des programmes mémorisés (c'est lui le « stored-program »)."},
+
+{topic:"Introduzione",t:"calcul",q:"Un mega, un giga e un tera byte (convenzione binaria) valgono rispettivamente:",
+ opts:[
+  "2²⁰, 2³⁰, 2⁴⁰ byte",
+  "10⁶, 10⁹, 10¹² byte esatti",
+  "2¹⁰, 2²⁰, 2³⁰ byte",
+  "2⁶, 2⁹, 2¹² byte"],
+ correct:0,
+ formula:"×1024 (=2¹⁰) à chaque palier :\nkilo 2¹⁰ · mega <em>2²⁰</em> · giga <em>2³⁰</em> · tera <em>2⁴⁰</em> · peta 2⁵⁰",
+ expl:"En binaire on multiplie par 1024 à chaque étage.",
+ trap:"L'option 10⁶/10⁹/10¹² est la convention <b>SI (décimale)</b> — vraie dans un autre contexte, mais pas pour la convention binaire demandée."},
+
+{topic:"Introduzione",q:"Il termine « architettura » di un calcolatore fu definito:",
+ opts:[
+  "Da von Neumann nel report EDVAC, fine anni '40",
+  "Da Turing con la macchina universale, anni '30",
+  "Dall'IBM per la famiglia S/360, anni '60",
+  "Da Babbage con l'Analytical Engine, '800"],
+ correct:2,
+ expl:"IBM, <b>System/360</b>, années 60 : première séparation explicite entre l'ISA (vue programmeur) et l'implémentation.",
+ trap:"von Neumann a défini le <i>modèle</i> de machine, pas le terme « architecture » au sens ISA."},
+
+{topic:"Introduzione",q:"Cos'è un « modello » come livello di astrazione?",
+ opts:[
+  "La realizzazione fisica finale del circuito in silicio",
+  "Una descrizione del comportamento logico elementare, indipendente dalla tecnologia realizzativa",
+  "Il codice macchina specifico di una CPU",
+  "Lo schema elettrico con i valori reali di tensione e corrente"],
+ correct:1,
+ expl:"Un modèle = <b>abstraction</b> du comportement logique, <b>indépendante de la techno</b> employée.",
+ trap:"« réalisation physique » et « schéma électrique » sont au contraire les niveaux les plus concrets."},
+
+/* ===== PRESTAZIONI ===== */
+{topic:"Prestazioni",t:"calcul",q:"La legge del tempo di CPU si scrive:",
+ opts:[
+  "T_cpu = Ni / (CPI · T_ck)",
+  "T_cpu = Ni · CPI · T_ck",
+  "T_cpu = CPI · frequenza di clock",
+  "T_cpu = Ni + CPI + T_ck"],
+ correct:1,
+ formula:"T_cpu = <em>Ni · CPI · T_ck</em>\n      = Ni · CPI / frequenza\n(Ni = nb d'instructions, CPI = cycles/instr, T_ck = période)",
+ expl:"C'est un <b>produit</b> des trois facteurs. Toute la conception (RISC, pipeline, fréquence) joue sur l'un d'eux.",
+ trap:"Les versions avec division ou addition « sonnent » bien mais sont dimensionnellement fausses."},
+
+{topic:"Prestazioni",q:"Nelle macchine RISC, rispetto alle CISC, la legge del T_cpu mostra che:",
+ opts:[
+  "Diminuiscono tutti e tre i fattori (Ni, CPI, T_ck)",
+  "Aumentano CPI e T_ck, diminuisce Ni",
+  "Aumenta Ni ma diminuiscono CPI e T_ck",
+  "Restano invariati Ni e CPI, cambia solo T_ck"],
+ correct:2,
+ expl:"Instructions simples → il en faut <b>plus</b> (Ni↑), mais chacune est simple → <b>CPI↓</b> et horloge plus courte → <b>T_ck↓</b>. Bilan global favorable.",
+ trap:"« tous diminuent » est trop beau : moins d'instructions est justement le point fort des CISC, pas des RISC."},
+
+{topic:"Prestazioni",q:"Perché nelle RISC il CPI è più basso che nelle CISC?",
+ opts:[
+  "Perché le istruzioni sono tutte semplici e l'hardware è più efficiente (spesso 1 ciclo)",
+  "Perché le RISC usano un clock più lento",
+  "Perché le RISC eliminano del tutto la pipeline",
+  "Perché le istruzioni RISC sono di lunghezza variabile"],
+ correct:0,
+ expl:"Format fixe + opérations élémentaires → exécution régulière, souvent <b>1 cycle</b> par instruction.",
+ trap:"Les RISC ont au contraire des instructions de <b>longueur fixe</b> et exploitent fortement la pipeline."},
+
+{topic:"Prestazioni",t:"calcul",q:"Il CPI (cicli per istruzione) si calcola come:",
+ opts:["CPI = Ni / Ncc","CPI = Ncc / Ni","CPI = Ncc · Ni","CPI = T_ck / Ni"],
+ correct:1,
+ formula:"CPI = <em>Ncc / Ni</em>\n(Ncc = nb total de cycles d'horloge, Ni = nb d'instructions)",
+ expl:"C'est le nombre moyen de cycles consommés par instruction.",
+ trap:"Ni/Ncc est l'inverse (instructions par cycle, l'IPC) — séduisant mais opposé."},
+
+{topic:"Prestazioni",t:"calcul",q:"Il MIPS si calcola:",
+ opts:[
+  "CPI medio · frequenza di clock (MHz)",
+  "Numero di istruzioni · CPI",
+  "Frequenza di clock (MHz) / CPI medio",
+  "Frequenza di clock / numero di istruzioni"],
+ correct:2,
+ formula:"MIPS = f / (CPI · 10⁶)\nf en MHz → MIPS = <em>f(MHz) / CPI</em>",
+ expl:"MIPS = millions d'instructions/seconde ; le MHz contient déjà le 10⁶.",
+ trap:"Multiplier par le CPI ralentirait le résultat alors qu'un CPI élevé doit <b>baisser</b> les MIPS → c'est bien une division."},
+
+{topic:"Prestazioni",q:"La capacità di mantenere prestazioni e servizio a fronte di variazioni di carico e di guasti si chiama:",
+ opts:["Throughput","Resilienza","Latenza","Banda passante"],
+ correct:1,
+ expl:"<b>Résilience</b> : continuer à offrir un service correct malgré charges variables et pannes.",
+ trap:"Throughput/latence/bande mesurent la performance brute, pas la robustesse face aux pannes."},
+
+{topic:"Prestazioni",q:"L'elapsed time (tempo di risposta) è:",
+ opts:[
+  "Solo il tempo di CPU in modalità utente",
+  "Il tempo medio tra due interruzioni",
+  "Solo il tempo speso dal sistema operativo",
+  "Il tempo totale per completare un task (CPU + I/O + attese), dall'inizio alla fine"],
+ correct:3,
+ expl:"Elapsed / wall-clock = temps <b>perçu</b>, il inclut I/O, attentes et autres processus.",
+ trap:"Le « temps CPU » (user+système) n'est qu'une partie de l'elapsed time."},
+
+{topic:"Prestazioni",q:"Nel calcolo delle prestazioni, il T_cpu comprende:",
+ opts:[
+  "Il T_cpu(user) e il T_cpu(sistema operativo)",
+  "Solo il tempo utente, escluso il SO",
+  "Anche il tempo di attesa per l'I/O su disco",
+  "Solo i cicli persi in cache miss"],
+ correct:0,
+ expl:"T_cpu = temps <b>user</b> + temps <b>système (SO)</b>.",
+ trap:"L'attente I/O n'entre PAS dans le T_cpu (elle est dans l'elapsed time)."},
+
+{topic:"Prestazioni",q:"Il benchmark Dhrystone è:",
+ opts:[
+  "Un benchmark reale basato su applicazioni di produzione",
+  "Un benchmark sintetico",
+  "Un simulatore di CPU",
+  "Un test di solo consumo energetico"],
+ correct:1,
+ expl:"Dhrystone est <b>synthétique</b> : un programme artificiel ciblant les opérations entières.",
+ trap:"« basé sur des applis réelles » décrit les benchmarks <i>réels</i> (ex. SPEC), pas Dhrystone."},
+
+{topic:"Prestazioni",q:"Un simulatore di CPU è:",
+ opts:[
+  "Un dispositivo hardware che sostituisce la CPU reale",
+  "Un benchmark standard della SPEC",
+  "Uno strumento software per modellare il comportamento di una CPU e valutarne le prestazioni",
+  "Un compilatore ottimizzato per RISC"],
+ correct:2,
+ expl:"C'est un <b>outil logiciel</b> de modélisation/évaluation, avant de fabriquer la puce."},
+
+{topic:"Prestazioni",q:"Dalla legge di Amdahl, se un miglioramento è poco usato, allora:",
+ opts:[
+  "Non è mai conveniente",
+  "Lo speedup complessivo tende comunque all'infinito",
+  "Anche con speedup parziale infinito, lo speedup complessivo è limitato dalla frazione di tempo in cui è usato",
+  "Il guadagno dipende solo dalla frequenza di clock"],
+ correct:2,
+ formula:"Speedup = 1 / [ (1−f) + f/s ]\ns → ∞  ⇒  Speedup_max = <em>1/(1−f)</em>\n(f = fraction de temps améliorée)",
+ expl:"Le gain global est plafonné par la partie <b>non</b> améliorée.",
+ trap:"« jamais convenable » est trop catégorique : un petit gain reste un gain."},
+
+{topic:"Prestazioni",t:"calcul",q:"La CPU A impiega 100 cicli per 10 istruzioni; la CPU B impiega 120 cicli per le stesse 10 istruzioni. Cosa è vero?",
+ opts:[
+  "B ha prestazioni sempre maggiori, indipendentemente dalla frequenza",
+  "A è sempre più veloce se ha frequenza di clock ≥ a quella di B",
+  "A è sempre più veloce indipendentemente dalla frequenza",
+  "Hanno le stesse prestazioni perché eseguono le stesse istruzioni"],
+ correct:1,
+ formula:"Temps = cicli / frequenza\nT_A = 100/f_A     T_B = 120/f_B\nSi f_A ≥ f_B : 100/f_A ≤ 100/f_B < 120/f_B → A plus rapide",
+ expl:"A fait le même travail en <b>moins de cycles</b> ; si sa fréquence est ≥, elle gagne forcément.",
+ trap:"« indipendentemente dalla frequenza » est faux : à fréquence plus basse, A pourrait perdre — d'où le « ≥ »."},
+
+{topic:"Prestazioni",t:"calcul",q:"Un'applicazione C++ dura 20 s. Nuovo compilatore: 70% delle istruzioni, ma +10% di CPI. Quanto dura?",
+ opts:["No, stesso processore","Sì, 12,7 s","Sì, 9,9 s","Sì, 15,4 s"],
+ correct:3,
+ formula:"T = IC · CPI · T_ck (même CPU)\nT_new = 0,70 · 1,10 · 20 = 0,77 · 20 = <em>15,4 s</em>",
+ expl:"On multiplie simplement les facteurs de variation : 0,70 × 1,10 = 0,77.",
+ trap:"12,7 ≈ oubli du +10% (0,70−0,10·…) ; 9,9 vient des chiffres de l'autre version (60%)."},
+
+{topic:"Prestazioni",t:"calcul",q:"Un'applicazione C++ dura 15 s. Nuovo compilatore: 60% delle istruzioni, ma +10% di CPI. Quanto dura?",
+ opts:["Sì, 8,2 s","Sì, 27,5 s","Sì, 9,9 s","No, stesso processore"],
+ correct:2,
+ formula:"T_new = 0,60 · 1,10 · 15 = 0,66 · 15 = <em>9,9 s</em>",
+ expl:"Même méthode : 0,60 × 1,10 = 0,66.",
+ trap:"27,5 = on a divisé par 0,66 au lieu de multiplier ; 8,2 oublie le +10%."},
+
+/* ===== LOGICA ===== */
+{topic:"Logica",q:"Una funzione logica si dice NON completamente specificata quando:",
+ opts:[
+  "Ha più di due variabili di ingresso",
+  "Alcune uscite hanno condizioni di indifferenza (don't care)",
+  "Non può essere messa in forma SP",
+  "Dipende dallo stato precedente"],
+ correct:1,
+ expl:"Présence de <b>don't care</b> : pour certaines combinaisons d'entrée, la sortie est indifférente (on s'en sert pour mieux simplifier).",
+ trap:"« dépend de l'état précédent » décrit une fonction <i>séquentielle</i>, pas une fonction incomplète."},
+
+{topic:"Logica",q:"La funzione EXNOR (XNOR) di due variabili vale 1:",
+ opts:[
+  "se e solo se gli ingressi sono diversi",
+  "se almeno un ingresso vale 1",
+  "se e solo se entrambi valgono 1",
+  "se e solo se gli ingressi sono uguali"],
+ correct:3,
+ expl:"XNOR = <b>comparateur d'égalité</b> : 1 quand A = B.",
+ trap:"« ingressi diversi » est exactement le XOR — le complément."},
+
+{topic:"Logica",q:"La funzione AND di due variabili vale 1:",
+ opts:[
+  "se e solo se tutti gli ingressi valgono 1",
+  "se almeno un ingresso vale 1",
+  "se gli ingressi sono diversi",
+  "se non tutti gli ingressi valgono 1"],
+ correct:0,
+ expl:"AND = 1 uniquement si <b>tous</b> à 1.",
+ trap:"« almeno uno » = OR ; « non tutti a 1 » = NAND."},
+
+{topic:"Logica",q:"Il teorema di De Morgan afferma che:",
+ opts:[
+  "(x + y)' = x' + y'",
+  "(x + y)' = x' · y'",
+  "(x · y)' = x' · y'",
+  "(x + y)' = x · y"],
+ correct:1,
+ formula:"(x + y)' = <em>x' · y'</em>\n(x · y)' = <em>x' + y'</em>",
+ expl:"Le complément d'une somme = produit des compléments (et réciproquement) : on <b>complémente chaque terme ET on change l'opérateur</b>.",
+ trap:"Les options qui gardent le même opérateur sont l'erreur classique."},
+
+{topic:"Logica",q:"Il teorema di complementarietà prevede che:",
+ opts:["X · X' = 1","X + X' = 0","X + X' = 1","X + X = 2X"],
+ correct:2,
+ formula:"X + X' = <em>1</em>     (dual : X · X' = 0)",
+ expl:"Une variable OU son complément couvre tous les cas → 1.",
+ trap:"X·X' = 1 et X+X' = 0 inversent les deux résultats."},
+
+{topic:"Logica",t:"calcul",q:"Quante funzioni logiche distinte esistono di 2 variabili indipendenti?",
+ opts:["4","16","8","256"],
+ correct:1,
+ formula:"Nb de fonctions de n variables = 2^(2ⁿ)\nn = 2 → 2^(2²) = 2⁴ = <em>16</em>",
+ expl:"2ⁿ lignes dans la table, chacune avec sortie 0/1 → 2 puissance (2ⁿ).",
+ trap:"256 = 2^(2³), c'est le cas n = 3 ; 4 = 2² oublie l'exposant imbriqué."},
+
+{topic:"Logica",q:"Un mintermine è:",
+ opts:[
+  "La somma logica (OR) di n letterali",
+  "Il prodotto logico (AND) di n letterali, ciascuno in forma vera o complementata, mai entrambe",
+  "Un prodotto in cui ogni variabile compare due volte",
+  "Una funzione che vale sempre 1"],
+ correct:1,
+ expl:"Minterme = <b>produit (AND)</b> de tous les littéraux, chacun direct ou complémenté.",
+ trap:"La <b>somme (OR)</b> de littéraux, c'est le <i>maxterme</i> — le dual."},
+
+{topic:"Logica",q:"La proprietà di decomposizione delle reti logiche dice che:",
+ opts:[
+  "Due reti connesse danno sempre una rete non logica",
+  "Una rete complessa può essere scomposta in reti più semplici, fino a gate elementari",
+  "Ogni rete logica deve avere una sola uscita",
+  "Una rete non può avere più di due livelli"],
+ correct:1,
+ expl:"Tout circuit complexe se ramène à une composition de blocs/portes élémentaires — base de la conception hiérarchique."},
+
+{topic:"Logica",q:"Il tempo di setup di un flip-flop è:",
+ opts:[
+  "Il tempo in cui gli ingressi devono restare stabili DOPO il fronte di clock",
+  "Il ritardo tra fronte di clock e uscita valida",
+  "Il tempo in cui gli ingressi devono restare stabili PRIMA del fronte di clock per essere campionati correttamente",
+  "Il periodo minimo del clock"],
+ correct:2,
+ expl:"Setup = stabilité requise <b>avant</b> le front actif.",
+ trap:"« stable APRÈS le front » = temps de <b>hold</b> ; « délai front→sortie » = temps de propagation. Trois notions souvent confondues."},
+
+{topic:"Logica",q:"Un multiplexer (MUX) è una rete logica con:",
+ opts:[
+  "1 ingresso e 2ⁿ uscite, attivate dai segnali di controllo",
+  "2ⁿ ingressi dato, n segnali di controllo, 1 uscita: porta in uscita l'ingresso selezionato",
+  "n ingressi che vengono sommati su un'unica uscita",
+  "due ingressi e due uscite che memorizzano un bit"],
+ correct:1,
+ expl:"MUX = <b>sélecteur 2ⁿ→1</b> : les n bits de contrôle choisissent quelle entrée sort.",
+ trap:"« 1 entrée → 2ⁿ sorties » est le <b>démultiplexeur</b>, l'inverse exact."},
+
+{topic:"Logica",q:"Un half-adder:",
+ opts:[
+  "Somma due bit con riporto in ingresso, dando somma e riporto",
+  "Sottrae due bit",
+  "Somma due bit (senza riporto in ingresso) e produce somma S e riporto C",
+  "Memorizza un singolo bit"],
+ correct:2,
+ expl:"Half-adder = 2 entrées, <b>pas</b> de carry-in ; sorties S (somme) et C (retenue).",
+ trap:"Avec carry-in en entrée (3 entrées), c'est le <b>full-adder</b>."},
+
+{topic:"Logica",q:"Una rete combinatoria si distingue da una sequenziale perché:",
+ opts:[
+  "L'uscita dipende solo dagli ingressi presenti, non dallo stato",
+  "L'uscita dipende dallo stato presente e dagli ingressi",
+  "Non può avere più di un ingresso",
+  "Richiede sempre un clock"],
+ correct:0,
+ expl:"Combinatoire : sortie = f(entrées actuelles seulement), aucune mémoire.",
+ trap:"« dépend de l'état » = circuit <b>séquentiel</b> (avec mémoire, souvent cadencé)."},
+
+{topic:"Logica",q:"In una ALU a 4 bit fatta con 4 ALU a 1 bit, il flag CARRY si ottiene:",
+ opts:[
+  "Prelevando il carry-out della ALU a 1 bit più significativa (bit 3)",
+  "Prelevando il carry della ALU meno significativa (bit 0)",
+  "Facendo l'AND di tutti i carry intermedi",
+  "Sommando i quattro bit di uscita"],
+ correct:0,
+ expl:"La retenue se propage en cascade ; le carry final est le carry-out de l'<b>étage le plus significatif</b> (bit 3)."},
+
+/* ===== MEMORIE ===== */
+{topic:"Memorie",q:"La località temporale dice che:",
+ opts:[
+  "Un dato vicino in memoria sarà probabilmente usato a breve",
+  "I dati vengono sempre letti in ordine sequenziale",
+  "Un dato usato in un istante sarà probabilmente riusato in un tempo vicino",
+  "La cache elimina del tutto gli accessi alla RAM"],
+ correct:2,
+ expl:"Dimension <b>temps</b> : ce qu'on vient d'utiliser, on le réutilise bientôt (boucles, variables).",
+ trap:"« dato vicino in memoria » est la localité <b>spatiale</b>."},
+
+{topic:"Memorie",q:"Una memoria è volatile se:",
+ opts:[
+  "I dati si conservano anche senza alimentazione",
+  "I dati vengono persi in assenza di alimentazione",
+  "Può essere letta ma non scritta",
+  "Ha un tempo di accesso fisso"],
+ correct:1,
+ expl:"Volatile = <b>perte des données sans courant</b> (ex. RAM).",
+ trap:"« conservés sans alimentation » décrit une mémoire <b>non volatile</b> (Flash, ROM)."},
+
+{topic:"Memorie",q:"La differenza tra SRAM e DRAM è che:",
+ opts:[
+  "La SRAM usa flip-flop per mantenere il dato, la DRAM usa condensatori (alta densità, ma richiede refresh)",
+  "La DRAM usa flip-flop, la SRAM condensatori",
+  "La SRAM è non volatile, la DRAM volatile",
+  "La DRAM è più veloce e più costosa della SRAM"],
+ correct:0,
+ expl:"SRAM = bascules (rapide, chère, peu dense, sans refresh) ; DRAM = condensateurs (dense, bon marché, lente, <b>refresh</b> nécessaire).",
+ trap:"L'option D inverse le compromis vitesse/prix (c'est la SRAM la plus rapide et chère)."},
+
+{topic:"Memorie",q:"Le DDR-SDRAM sono:",
+ opts:[
+  "Memorie non volatili che sostituiscono il disco",
+  "RAM statiche a singolo fronte di clock",
+  "RAM dinamiche Double Data Rate, che trasferiscono su entrambi i fronti di clock",
+  "Memorie a sola lettura programmabili"],
+ correct:2,
+ expl:"DDR = <b>Double Data Rate</b> : un transfert sur le front montant <i>et</i> descendant → débit doublé à fréquence égale."},
+
+{topic:"Memorie",q:"Le memorie FLASH:",
+ opts:[
+  "Sono volatili e perdono i dati allo spegnimento",
+  "Sono non volatili, possono sostituire gli hard disk: più veloci ma più costose per bit",
+  "Sono RAM statiche a bassissima densità",
+  "Non possono essere riscritte dopo la produzione"],
+ correct:1,
+ expl:"Flash = non volatile, base des SSD : plus rapide que le disque mécanique mais coût/bit supérieur.",
+ trap:"« volatile » est faux ; et elles sont bien <b>réinscriptibles</b> (sinon ce serait une ROM)."},
+
+{topic:"Memorie",q:"La misura di affidabilità che indica il tempo medio tra due guasti è:",
+ opts:["Il throughput","Il MTTF (Mean Time To Failure)","Il CPI","La latenza di accesso"],
+ correct:1,
+ expl:"<b>MTTF</b> = temps moyen avant défaillance ; plus il est élevé, plus la mémoire est fiable."},
+
+/* ===== CACHE ===== */
+{topic:"Cache",t:"calcul",q:"Una cache ha Hit Rate 90%, tempo di hit 2 Tck, tempo di miss 20 Tck. Tempo di accesso medio?",
+ opts:["4 Tck","6 Tck","3,8 Tck","20 Tck"],
+ correct:2,
+ formula:"t_moy = HR·t_hit + (1−HR)·t_miss\n= 0,9·2 + 0,1·20 = 1,8 + 2 = <em>3,8 Tck</em>",
+ expl:"Moyenne pondérée par la probabilité de chaque cas (l'énoncé donne le temps de miss <i>total</i>).",
+ trap:"4 Tck = formule t_hit + (1−HR)·pénalité, valable seulement si 20 est une pénalité <i>en plus</i> du hit."},
+
+{topic:"Cache",q:"I miss di conflitto (conflict miss) sono dovuti a:",
+ opts:[
+  "Il primo accesso a un blocco mai caricato",
+  "La cache troppo piccola per il working set",
+  "Più blocchi che competono per lo stesso set, pur essendoci spazio altrove",
+  "Un errore di parità sulla linea"],
+ correct:2,
+ expl:"Les 3 C : <b>compulsory</b> (1er accès), <b>capacity</b> (cache trop petite), <b>conflict</b> (collision sur un même set alors qu'il reste de la place ailleurs — typique de l'associativité limitée).",
+ trap:"Les options A et B sont les <i>autres</i> types de miss, vrais mais hors sujet ici."},
+
+{topic:"Cache",q:"Passando da una cache 2-way a una fully associative:",
+ opts:[
+  "Un blocco può andare in qualsiasi linea: meno conflict miss, ma confronto del tag su tutte le linee",
+  "Diminuisce la capacità totale della cache",
+  "Sparisce il campo offset nell'indirizzo",
+  "Non serve più il tag"],
+ correct:0,
+ expl:"Fully associative = pas d'index, le bloc va n'importe où → <b>moins de conflits</b>, au prix d'une comparaison du tag sur <b>toutes</b> les lignes.",
+ trap:"L'offset et le tag restent indispensables ; la capacité ne change pas."},
+
+{topic:"Cache",t:"calcul",piege:true,
+ q:"CPU 32 bit di indirizzo, cache con linee da 32 byte, 8 Mbyte, 8-way, vuota. Legge a[i] (256 byte, indirizzo A0F0F080) poi b[i] (256 byte, indirizzo A2F0F1A0). Alla fine la cache:",
+ opts:[
+  "Tutti gli elementi in cache, a e b in linee e set differenti",
+  "Tutti in cache, alcuni valori di a e b nello stesso set ma in linee diverse",
+  "Alcuni elementi di a rimpiazzati da b (stesso set, tag diversi)",
+  "Alcuni elementi di a rimpiazzati da b (stessa linea e set)"],
+ correct:0,
+ formula:"offset = 5 bits ; sets = 2²³/2⁵/2³ = 2¹⁵ → index 15 bits\nindex(a) = 0x0F080 / 32 = set 1924 → sets 1924…1931\nindex(b) = 0x0F1A0 / 32 = set 1933 → sets 1933…1940\nécart = 0x120 = 288 o = <em>9 lignes</em> (vecteurs de 8 lignes)",
+ expl:"Les deux plages de sets ne se touchent pas (le set 1932 reste vide) → aucun conflit, tout rentre dans des sets distincts.",
+ trap:"La réponse « stesso set » est tentante car les adresses se ressemblent ; mais 9 lignes d'écart pour 8 lignes de données ⇒ pas de chevauchement."},
+
+{topic:"Cache",t:"calcul",q:"Parola codificata 1100 1100 0010 (bit 1→12). Secondo Hamming:",
+ opts:["È corretta","Ha un errore nel bit 11","Ha un errore nel bit 12","Ha un errore nel bit 3"],
+ correct:1,
+ formula:"P1(1,3,5,7,9,11)=3→1   P2(2,3,6,7,10,11)=3→1\nP4(4,5,6,7,12)=2→0     P8(8,9,10,11,12)=1→1\nSyndrome P8P4P2P1 = 1011₂ = <em>11</em>",
+ expl:"Le syndrome lu en binaire pointe directement la position en erreur.",
+ trap:"Syndrome ≠ 0000 donc « corretta » est exclu ; bit 12 (1100) et bit 3 (0011) viennent d'une mauvaise lecture des parités."},
+
+{topic:"Cache",q:"In Hamming, le distanze minime per rilevare/correggere sono:",
+ opts:[
+  "Rilevare d errori: d ≥ 2k+1 ; correggere k: d ≥ k+1",
+  "Rilevare d errori: distanza ≥ d+1 ; correggere k errori: distanza ≥ 2k+1",
+  "Rilevare e correggere: entrambe distanza ≥ 2",
+  "La distanza di Hamming non influisce sulla correzione"],
+ correct:1,
+ formula:"détecter d erreurs : distance ≥ <em>d + 1</em>\ncorriger k erreurs : distance ≥ <em>2k + 1</em>",
+ expl:"Détecter coûte moins « cher » que corriger (il faut écarter davantage les mots valides pour corriger).",
+ trap:"L'option A intervertit les deux formules."},
+
+/* ===== PIPELINE ===== */
+{topic:"Pipeline",q:"Che cos'è il parallelismo temporale?",
+ opts:[
+  "La replicazione di unità funzionali usate nello stesso istante",
+  "La quantità di concorrenza disponibile in un algoritmo",
+  "Il pipelining (in un'unità di elaborazione o in più unità in cascata)",
+  "La presenza di più memorie nel calcolatore"],
+ correct:2,
+ expl:"Parallélisme <b>temporel = pipeline</b> : étages successifs, plusieurs instructions à des stades différents.",
+ trap:"« réplication d'unités utilisées en même temps » = parallélisme <b>spatial</b>."},
+
+{topic:"Pipeline",q:"Un'alea RAW (read-after-write) è:",
+ opts:[
+  "Un'istruzione legge un dato prima che la precedente l'abbia scritto (dipendenza vera)",
+  "Un'istruzione scrive prima che la precedente legga",
+  "Due istruzioni scrivono lo stesso registro in ordine errato",
+  "Si verifica solo dopo un salto"],
+ correct:0,
+ expl:"RAW = <b>vraie dépendance</b> de données : le lecteur doit attendre l'écriture du producteur. C'est l'aléa le plus fréquent.",
+ trap:"« écrit avant que le précédent lise » = WAR ; « deux écritures en désordre » = WAW."},
+
+{topic:"Pipeline",q:"Un'alea WAR (write-after-read) è:",
+ opts:[
+  "Un'alea di controllo dovuta a un salto",
+  "Un'alea di dati: un'istruzione successiva scrive un dato non ancora letto da una precedente",
+  "Un'alea di dati: si legge un dato non ancora scritto",
+  "Un'alea strutturale per mancanza di risorse"],
+ correct:1,
+ expl:"WAR = aléa de <b>données</b> : l'écriture d'une instruction postérieure menace une lecture antérieure (apparaît avec plusieurs pipelines / out-of-order).",
+ trap:"« lire un dato non ancora scritto » est le RAW, pas le WAR."},
+
+{topic:"Pipeline",q:"La differenza tra Branch Prediction Buffer (BPB) e Branch Target Buffer (BTB) è che:",
+ opts:[
+  "Il BPB memorizza solo i dati, il BTB solo le istruzioni",
+  "Sono sinonimi",
+  "Il BPB suggerisce solo la predizione (taken/not), il BTB suggerisce predizione E indirizzo di destinazione",
+  "Il BTB serve solo nelle CPU senza pipeline"],
+ correct:2,
+ expl:"BPB : prédit seulement <b>si</b> le saut est pris. BTB : stocke aussi l'<b>adresse cible</b> → on peut aller chercher la bonne instruction sans attendre le calcul."},
+
+{topic:"Pipeline",q:"Nelle pipeline, i registri a doppia porta (lettura+scrittura nello stesso ciclo) servono a:",
+ opts:[
+  "Aumentare la frequenza di clock",
+  "Evitare alee strutturali (accesso simultaneo al register file)",
+  "Eliminare le alee di controllo",
+  "Ridurre il numero di stadi"],
+ correct:1,
+ expl:"Sans double accès, un étage qui lit et un autre qui écrit le register file au même cycle entreraient en conflit → <b>aléa structurel</b>. La double porte le supprime."},
+
+{topic:"Pipeline",t:"calcul",q:"Pipeline a K stadi, n istruzioni; lo speedup rispetto alla CPU sequenziale tende a K:",
+ opts:[
+  "Solo se il numero di istruzioni n tende all'infinito (e senza alee)",
+  "Sempre, qualunque sia n",
+  "Solo se K è una potenza di 2",
+  "Solo se il clock raddoppia"],
+ correct:0,
+ formula:"Speedup = n·K / (K + n − 1)\nn → ∞  ⇒  Speedup → <em>K</em>\n(en l'absence d'aléas qui ajoutent des stalls)",
+ expl:"Le « remplissage » initial de la pipeline (K−1 cycles) devient négligeable seulement quand n est grand.",
+ trap:"« sempre » oublie justement le coût d'amorçage et les aléas."},
+
+{topic:"Pipeline",q:"Gli stadi classici della pipeline RISC-V a 5 stadi sono:",
+ opts:[
+  "Fetch, Compile, Link, Execute, Store",
+  "Instruction Fetch, Instruction Decode, Execute, Memory, Write Back",
+  "Decode, Execute, Predict, Commit, Retire",
+  "Load, ALU, Branch, Cache, Output"],
+ correct:1,
+ expl:"<b>IF → ID → EX → MEM → WB</b> : fetch, décodage/lecture registres, exécution ALU, accès mémoire, écriture du résultat."},
+
+/* ===== RISC-V ===== */
+{topic:"RISC-V",t:"calcul",q:"Qual è l'effetto di  lw x9, 32(x22) ?",
+ opts:[
+  "Memoria[x22 + 32] = x9 (store)",
+  "x9 = Memoria[x22 + 32] (carica una word)",
+  "x9 = Memoria[32] soltanto",
+  "x22 = Memoria[x9 + 32]"],
+ correct:1,
+ formula:"lw rd, offset(rs1) → rd = Mem[rs1 + offset]\nlw x9, 32(x22) → <em>x9 = Mem[x22 + 32]</em>",
+ expl:"<b>lw = load word</b> : on charge depuis l'adresse base(x22)+offset(32) vers x9.",
+ trap:"Le store (option A) écrit en mémoire — c'est l'inverse de lw."},
+
+{topic:"RISC-V",t:"calcul",q:"Qual è l'effetto di  sw x9, 12(x10) ?",
+ opts:[
+  "x9 = Memoria[x10 + 12] (carica una word)",
+  "Memoria[x9 + 12] = x10",
+  "Memoria[x10 + 12] = x9 (scrive una word)",
+  "x10 = Memoria[x9 + 12]"],
+ correct:2,
+ formula:"sw rs2, offset(rs1) → Mem[rs1 + offset] = rs2\nsw x9, 12(x10) → <em>Mem[x10 + 12] = x9</em>",
+ expl:"<b>sw = store word</b> : on écrit x9 en mémoire à l'adresse x10+12.",
+ trap:"L'option A est un load (lw) déguisé — piège classique store/load."},
+
+{topic:"RISC-V",q:"In RISC-V, quale registro è hardwired a zero (contiene sempre 0)?",
+ opts:["x1","x0","x2","x31"],
+ correct:1,
+ expl:"<b>x0</b> (alias zero) : lecture = 0, écriture ignorée. Utile pour mv, NOP, comparaisons.",
+ trap:"x1 = ra (return address), x2 = sp (stack pointer) — registres bien réels, pas nuls."},
+
+{topic:"RISC-V",q:"Il formato istruzione di tipo R, in RISC-V:",
+ opts:[
+  "Per aritmetico immediate (addi), registri a 8 bit",
+  "Per i salti condizionati con offset",
+  "Per aritmetico NON immediate (add, sub), campi registro a 5 bit",
+  "Per le load/store con offset di indirizzo"],
+ correct:2,
+ expl:"Format <b>R</b> = opérations registre-registre <b>sans immédiat</b> (add, sub, and…). 32 registres → champs rs1/rs2/rd de <b>5 bits</b> (2⁵=32).",
+ trap:"addi (avec immédiat) utilise le format I, pas R."},
+
+{topic:"RISC-V",q:"Come funziona l'aggiornamento del Program Counter in RISC-V?",
+ opts:[
+  "Sempre PC + 1",
+  "PC + 4 di norma; in caso di branch preso, la destinazione è scelta da un multiplexer (controllato dall'esito Zero)",
+  "PC + 4 anche per i branch presi, senza eccezioni",
+  "Deciso casualmente dal predittore"],
+ correct:1,
+ expl:"Par défaut <b>PC ← PC + 4</b> (instructions de 4 octets) ; sur un branch pris, un MUX sélectionne l'adresse cible, piloté par le signal Zero de l'ALU.",
+ trap:"« PC+1 » oublie que les instructions font 4 octets ; « PC+4 même pour les branchements » ignorerait le saut."},
+
+{topic:"RISC-V",q:"Nel modello di von Neumann, quale componente contiene sia istruzioni sia dati durante l'esecuzione?",
+ opts:["L'unità di controllo","La memoria principale","L'ALU","I registri di I/O"],
+ correct:1,
+ expl:"Principe <b>stored-program</b> : programme et données partagent la même <b>mémoire principale</b> (≠ Harvard, mémoires séparées)."},
+
+/* ===== DISCO / RAID ===== */
+{topic:"Disco/RAID",q:"In un disco fisso, il « cilindro » è:",
+ opts:[
+  "L'insieme, su un solo piatto, di tutte le tracce",
+  "L'insieme di tutti i settori di una sola traccia",
+  "L'insieme, sui vari piatti, di tutte le tracce equidistanti dal centro",
+  "Il braccio che muove le testine"],
+ correct:2,
+ expl:"Cylindre = toutes les pistes de <b>même rayon empilées sur les différents plateaux</b> ; accessibles sans déplacer le bras."},
+
+{topic:"Disco/RAID",q:"Il processo di lettura di un disco fisso prevede:",
+ opts:[
+  "Il solenoide percorso da corrente che polarizza le particelle",
+  "Il solenoide NON percorso da corrente: le particelle magnetizzate inducono una corrente nella testina, senza contatto",
+  "La testina tocca il piatto per leggere il dato",
+  "La lettura tramite un raggio laser"],
+ correct:1,
+ expl:"En lecture, la bobine n'est <b>pas</b> alimentée : les domaines magnétisés qui défilent <b>induisent</b> un courant dans la tête (sans contact, sur coussin d'air).",
+ trap:"« solénoïde alimenté qui polarise » décrit l'<b>écriture</b>, pas la lecture."},
+
+{topic:"Disco/RAID",q:"Il RAID 5:",
+ opts:[
+  "Duplica interamente i dati su due dischi (mirroring)",
+  "Non offre alcuna tolleranza ai guasti",
+  "Distribuisce dati e parità su tutti i dischi; tollera la rottura di max 1 disco; spreco ≈ 1/n",
+  "Tollera la rottura di 2 dischi"],
+ correct:2,
+ expl:"RAID 5 = <b>parité distribuée</b> sur tous les disques, tolère <b>1</b> panne, surcoût d'espace ≈ 1/n.",
+ trap:"Mirroring = RAID 1 ; aucune tolérance = RAID 0 ; 2 pannes = RAID 6. Tous plausibles, tous faux ici."},
+
+{topic:"Disco/RAID",q:"Il RAID 6:",
+ opts:[
+  "Usa doppia parità distribuita: tollera la rottura di massimo 2 dischi",
+  "Tollera massimo 1 disco",
+  "Non usa parità",
+  "Tollera la rottura di tutti i dischi tranne uno"],
+ correct:0,
+ expl:"RAID 6 = <b>double parité</b> → résiste à la perte simultanée de <b>2</b> disques (au prix de 2 disques de redondance)."},
+
+{topic:"Disco/RAID",q:"RAID 5 con disco hot spare: si rompe un disco. Cosa succede?",
+ opts:[
+  "I dati sono irrecuperabili anche con un solo disco rotto",
+  "L'area persa è ricostruita con la parità sul disco hot spare; ma due rotture simultanee fanno perdere tutto (l'hot spare vuoto non aiuta)",
+  "L'hot spare permette di tollerare 2 rotture simultanee",
+  "L'hot spare contiene già una copia completa dei dati"],
+ correct:1,
+ expl:"Le hot spare (vide) est reconstruit automatiquement à partir de la parité. Mais s'il y a <b>deux</b> pannes en même temps avant reconstruction, RAID 5 perd tout — le spare vide n'y change rien.",
+ trap:"L'option C confond RAID 5+spare avec RAID 6 ; le spare n'est pas une copie (option D)."},
+
+{topic:"Memorie",q:"La memoria virtuale serve a:",
+ opts:[
+  "Aumentare la frequenza di clock della CPU",
+  "Ampliare virtualmente la RAM usando la memoria di massa, gestendo lo spazio in pagine",
+  "Sostituire completamente la cache",
+  "Eseguire istruzioni in parallelo"],
+ correct:1,
+ expl:"VM = espace d'adressage > RAM physique, découpé en <b>pages</b> ; débordement sur le disque (swap), géré par pagination + TLB."},
+
+{topic:"Memorie",q:"La TLB (Translation Lookaside Buffer) è:",
+ opts:[
+  "La tabella che contiene tutti i dati del programma",
+  "Una cache delle traduzioni indirizzo virtuale→fisico; un miss porta alla page table (ed eventuale page fault)",
+  "Un registro che conserva il program counter",
+  "Una memoria che sostituisce la RAM centrale"],
+ correct:1,
+ expl:"TLB = <b>cache de la table des pages</b> (VPN→PFN). Miss TLB → on consulte la page table ; si la page n'est pas en RAM → <b>page fault</b> (gestion logicielle, accès disque)."}
+];
+
+/* ---------- Build ---------- */
+const quiz=document.getElementById('quiz');
+const L=['A','B','C','D'];
+let answered=0,score=0;
+document.getElementById('scoreTot').textContent=Q.length;
+document.getElementById('finalTot').textContent=Q.length;
+
+const topics=[...new Set(Q.map(q=>q.topic))];
+const sel=document.getElementById('topicSel');
+topics.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;sel.appendChild(o);});
+
+Q.forEach((item,i)=>{
+  const card=document.createElement('article');
+  card.className='card';
+  card.dataset.topic=item.topic;
+  card.dataset.calc=item.t==='calcul'?'1':'0';
+  const tClass=item.t==='calcul'?'calcul':'concept';
+  const codeHtml=item.code?`<pre class="code">${item.code}</pre>`:'';
+  const optsHtml=item.opts.map((o,j)=>`<li class="opt" data-i="${j}"><span class="lt">${L[j]}</span><span class="ot">${o}</span><span class="mark"></span></li>`).join('');
+  const fHtml=item.formula?`<div class="formula">${item.formula}</div>`:'';
+  const trapHtml=item.trap?`<div class="trap">${item.trap}</div>`:'';
+  card.innerHTML=`
+    <div class="qtop">
+      <span class="qnum">${String(i+1).padStart(2,'0')}</span>
+      <span class="qtopic" data-t="${tClass}">${item.topic}</span>
+    </div>
+    <p class="qtext">${item.q}</p>${codeHtml}
+    <ul class="opts">${optsHtml}</ul>
+    <div class="expl"><span class="verdict"></span>${fHtml}<p>${item.expl}</p>${trapHtml}</div>`;
+  const opts=card.querySelectorAll('.opt');
+  const expl=card.querySelector('.expl');
+  const verdict=card.querySelector('.verdict');
+  opts.forEach(opt=>{
+    opt.addEventListener('click',()=>{
+      if(card.dataset.done)return;
+      card.dataset.done='1';
+      const chosen=+opt.dataset.i, right=item.correct;
+      opts.forEach(o=>{
+        o.classList.add('locked');
+        const idx=+o.dataset.i;
+        if(idx===right){o.classList.add('correct');o.querySelector('.mark').textContent='✓ corretta';}
+        if(idx===chosen&&chosen!==right){o.classList.add('wrong');o.querySelector('.mark').textContent='✗ la tua';}
+      });
+      if(chosen===right){verdict.textContent='✓ Bonne réponse';verdict.className='verdict ok';card.classList.add('done');score++;}
+      else{verdict.textContent='✗ Faux — bonne réponse : '+L[right];verdict.className='verdict no';card.classList.add('failed');}
+      expl.classList.add('show');answered++;updateHud();
+    });
+  });
+  quiz.appendChild(card);
+});
+
+function updateHud(){
+  document.getElementById('scoreNow').textContent=score;
+  document.getElementById('answered').textContent=answered;
+  document.getElementById('barfill').style.width=(answered/Q.length*100)+'%';
+  if(answered===Q.length)showFinal();
+}
+function showFinal(){
+  const f=document.getElementById('final');
+  document.getElementById('finalScore').textContent=score;
+  const pct=score/Q.length;
+  let m;
+  if(pct===1)m="Parfait, même les pièges sont tombés. Prêt·e ✦";
+  else if(pct>=.85)m="Excellent — relis juste les quelques pièges manqués.";
+  else if(pct>=.7)m="Solide. Revois les définitions voisines (RAW/WAR, setup/hold, MUX/DEMUX).";
+  else if(pct>=.5)m="Correct mais fragile : reprends chaque explication, le piège y est expliqué.";
+  else m="À retravailler : lis les explications, elles montrent pourquoi chaque faux semble vrai.";
+  document.getElementById('finalMsg').textContent=m;
+  f.classList.add('show');f.scrollIntoView({behavior:'smooth'});
+}
+
+sel.addEventListener('change',()=>applyFilter());
+let calcOnly=false;
+document.getElementById('toggleCalc').addEventListener('click',e=>{
+  calcOnly=!calcOnly;
+  e.target.textContent=calcOnly?'Toutes les questions':'Calculs seuls';
+  applyFilter();
+});
+function applyFilter(){
+  const t=sel.value;
+  document.querySelectorAll('.card').forEach(c=>{
+    const okT=(t==='all'||c.dataset.topic===t);
+    const okC=(!calcOnly||c.dataset.calc==='1');
+    c.classList.toggle('hidden',!(okT&&okC));
+  });
+}
+</script>
+</body>
+</html>
